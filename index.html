@@ -476,11 +476,6 @@ function applySkySliders() {
   if (skySliderMode === 0) {
     const base = new THREE.Color().setHSL(skyH, skyS, skyL);
     skyTopTarget.copy(base).multiplyScalar(0.42);
-    const newHoriz = base.clone().lerp(new THREE.Color(0xddd8c8), 0.52);
-    skyHorizTarget = newHoriz.clone();
-    skyHorizBandTarget.copy(newHoriz);
-    const hsl = {}; newHoriz.getHSL(hsl);
-    horizH = hsl.h; horizS = hsl.s; horizL = hsl.l;
   } else {
     skyHorizTarget = new THREE.Color().setHSL(horizH, horizS, horizL);
     skyHorizBandTarget.copy(skyHorizTarget);
