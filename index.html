@@ -2,158 +2,306 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta http-equiv="Cache-Control" content="no-store">
 <title>Driving in Tokyo</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #000; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; background:#111; display:flex; justify-content:center; align-items:center; font-family:'Courier New',monospace; }
 
-  #loading {
-    position: fixed; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    background: #111; z-index: 20; color: #ccc; font-family: sans-serif;
-  }
-  #pbar { width: 200px; height: 3px; background: #333; margin-top: 12px; }
-  #pfill { height: 100%; width: 0%; background: #aaa; }
+#gameboy {
+  width:  min(100vw, calc(100dvh * 0.565));
+  height: min(100dvh, calc(100vw / 0.565));
+  background: linear-gradient(160deg, #d4cfb8 0%, #c4bfa8 60%, #b8b39e 100%);
+  border-radius: 22px;
+  box-shadow: inset 2px 3px 10px rgba(255,255,255,.55), inset -2px -3px 8px rgba(0,0,0,.25), 6px 10px 28px rgba(0,0,0,.65);
+  display: flex; flex-direction: column;
+  padding: 14px 14px 18px; gap: 10px;
+  position: relative; overflow:hidden;
+}
+#gameboy::after {
+  content:''; position:absolute; inset:0; border-radius:22px; pointer-events:none; z-index:9999;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='250' height='250' filter='url(%23n)'/></svg>");
+  opacity:0.07; mix-blend-mode:overlay;
+}
 
-  #overlay {
-    position: fixed; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.7); z-index: 10; color: #fff; font-family: sans-serif;
-  }
-  #overlay.hidden { display: none; }
-  #overlay h1 { font-size: 2rem; margin-bottom: 0.5em; }
-  #overlay p { color: #aaa; font-size: 0.9rem; margin: 0.2em 0; }
-  .vol-section { margin-top: 1.2em; width: 280px; }
-  .vol-section h2 { font-size: 0.8rem; color: #888; margin: 0 0 0.5em; letter-spacing: 0.05em; }
-  .vol-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.5em; }
-  .vol-row label { color: #bbb; font-size: 0.82rem; width: 90px; text-align: right; white-space: nowrap; }
-  .vol-row input[type=range] { flex: 1; accent-color: #aaa; cursor: pointer; }
-  .vol-row span { color: #ccc; font-size: 0.82rem; min-width: 3em; }
-  #now-playing { margin-top: 0.6em; font-size: 0.75rem; color: #888; min-height: 1.2em; }
-  #start-btn {
-    margin-top: 1.2em; padding: 0.6em 2em;
-    background: #555; color: #fff; border: none;
-    border-radius: 4px; font-size: 1rem; cursor: pointer;
-  }
-  #start-btn:hover { background: #777; }
+#screen-wrapper {
+  flex: 0 0 54%;
+  background: #1e1e1e;
+  border-radius: 14px;
+  padding: 7px;
+  box-shadow: inset 4px 4px 14px rgba(0,0,0,.85), inset -1px -1px 4px rgba(255,255,255,.08);
+  position: relative; overflow: hidden;
+  cursor: crosshair; touch-action: none;
+}
+#screen-wrapper::before {
+  content:''; position:absolute; inset:5px; border-radius:9px; background:#0d1a0d; z-index:0;
+}
+#gameCanvas {
+  width:100%; height:100%; display:block; border-radius:9px; position:relative; z-index:1;
+  filter: sepia(.1) saturate(.9) brightness(.95);
+}
+#crosshair {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  color:rgba(190,215,190,.6); font-size:18px; font-weight:100; pointer-events:none; z-index:6;
+  text-shadow:0 0 8px rgba(80,200,80,.3); line-height:1; display:none;
+}
 
-  #crosshair {
-    position: fixed; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 16px; height: 16px;
-    pointer-events: none; z-index: 5; display: none;
-  }
-  #crosshair.show { display: block; }
-  #crosshair::before, #crosshair::after {
-    content: ''; position: absolute; background: rgba(255,255,255,0.8);
-  }
-  #crosshair::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
-  #crosshair::after  { width: 1px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
+#hud {
+  position:absolute; top:9px; left:11px; right:11px;
+  display:flex; justify-content:space-between; flex-wrap:wrap; gap:2px;
+  z-index:10; pointer-events:none;
+  font-size:clamp(14px,3.6vw,20px);
+  color:rgba(185,215,185,.92); text-shadow:0 0 6px rgba(0,220,0,.35); letter-spacing:.04em;
+  line-height:1.1;
+}
+#track-bar {
+  position:absolute; bottom:7px; left:9px; right:9px;
+  z-index:10; pointer-events:none;
+  font-size:clamp(16px,4.3vw,24px);
+  color:rgba(170,210,170,.85); text-shadow:0 0 5px rgba(0,200,0,.3);
+  white-space:normal; word-break:break-word;
+  text-align:center; line-height:1.2;
+}
 
-#connecting {
-    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-    color: #fff; font-family: sans-serif; font-size: 0.85rem;
-    pointer-events: none; z-index: 5; display: none;
-    white-space: nowrap;
-  }
-#coords {
-    position: fixed; top: 10px; left: 10px;
-    color: #fff; font-family: monospace; font-size: 0.8rem;
-    pointer-events: none; z-index: 5;
-    text-shadow: 0 0 4px #000;
-  }
-  .controls { margin: 0.8em 0; }
-  .ctrl-row {
-    display: flex; align-items: baseline;
-    margin-bottom: 0.22em;
-    font-size: 0.84rem; font-family: monospace; color: #ccc;
-  }
-  .ctrl-key  { display: inline-block; min-width: 4.2em; color: #e0e0e0; }
-  .ctrl-key::after { content: '/'; }
-  .ctrl-sep  { display: none; }
-  .ctrl-desc { color: #aaa; margin-left: 0.3em; }
+#loading-screen, #start-overlay, #sound-panel {
+  position:absolute; inset:0; z-index:20; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  border-radius:9px; padding:12px;
+}
+#loading-screen { background:rgba(10,20,10,.95); color:#8dc88d; font-size:clamp(9px,2.5vw,13px); gap:8px; }
+#start-overlay  { background:rgba(8,15,8,.92); color:#aadaaa; gap:7px; }
+#start-overlay h1 { font-size:clamp(22px,6vw,32px); color:#c8e8c8; letter-spacing:.05em; text-align:center; margin-bottom:2px; }
+#start-overlay .ctrl-hint { font-size:clamp(6px,1.6vw,8.5px); color:#669966; text-align:center; line-height:1.6; }
+
+.vol-row-sm { display:flex; align-items:center; gap:6px; width:100%; }
+.vol-row-sm label { font-size:clamp(6px,1.5vw,8px); color:#88aa88; min-width:4em; text-align:right; }
+.vol-row-sm input[type=range] { flex:1; accent-color:#6a8; height:14px; cursor:pointer; }
+.vol-row-sm span { font-size:clamp(6px,1.5vw,8px); color:#99bb99; min-width:2.5em; }
+
+#audio-load-msg { font-size:clamp(12px,3vw,16px); color:#557755; text-align:center; }
+#start-btn {
+  margin-top:4px; padding:6px 18px;
+  background:transparent; color:#aaddaa; border:1px solid #446644;
+  font-family:inherit; font-size:clamp(18px,4.6vw,26px); cursor:pointer; letter-spacing:.05em;
+  border-radius:4px;
+}
+#start-btn:disabled { opacity:.4; cursor:default; }
+#start-btn:not(:disabled):active { background:rgba(100,180,100,.15); }
+
+#sound-panel { background:rgba(8,15,8,.95); z-index:18; display:none; gap:14px; touch-action:auto; }
+#sound-panel h2 { font-size:clamp(16px,4vw,22px); color:#99cc99; }
+.vol-block { width:100%; display:flex; flex-direction:column; gap:6px; }
+.vol-block label { font-size:clamp(18px,4.5vw,24px); color:#88aa88; }
+.vol-block-slider { display:flex; align-items:center; gap:8px; width:100%; }
+.vol-block-slider span { font-size:clamp(10px,2.5vw,14px); color:#99bb99; min-width:2.8em; }
+
+#connecting-bar {
+  position:absolute; top:25%; left:9px; right:9px;
+  z-index:10; pointer-events:none;
+  font-size:clamp(24px,6vw,34px);
+  font-weight:bold;
+  color:rgba(155,200,155,.9);
+  text-align:center; display:none;
+  white-space:normal; word-break:break-word; line-height:1.2;
+}
+
+#controls { flex:1; display:flex; flex-direction:column; gap:8px; }
+#controls-mid { flex:4; display:flex; align-items:stretch; gap:8px; }
+
+#dpad-housing {
+  align-self:center; height:75%; aspect-ratio:1; flex-shrink:0; max-width:210px;
+  background:none; border:none; padding:0; box-shadow:none; border-radius:0;
+}
+#dpad { width:100%; height:100%; display:grid; grid-template-columns:1fr 1.1fr 1fr; grid-template-rows:1fr 1.1fr 1fr; gap:2px; }
+.dpad-btn {
+  background:linear-gradient(145deg,#2a2a2a,#111); border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .08s, box-shadow .08s;
+  box-shadow:1px 1px 3px rgba(0,0,0,.5), -1px -1px 2px rgba(255,255,255,.08);
+}
+.dpad-btn.pressed, .dpad-btn:active { background:linear-gradient(145deg,#111,#2a2a2a); box-shadow:inset 2px 2px 5px rgba(0,0,0,.7); }
+.dpad-arrow { color:#888; font-size:clamp(11px,3.5vw,18px); pointer-events:none; }
+
+#dpad-up     { grid-area:1/2; border-radius:5px 5px 2px 2px; }
+#dpad-left   { grid-area:2/1; border-radius:5px 2px 2px 5px; }
+#dpad-center { grid-area:2/2; border-radius:4px; background:#1a1a1a; }
+#dpad-right  { grid-area:2/3; border-radius:2px 5px 5px 2px; }
+#dpad-down   { grid-area:3/2; border-radius:2px 2px 5px 5px; }
+#dpad-corner-tl { grid-area:1/1; background:transparent!important; box-shadow:none!important; }
+#dpad-corner-tr { grid-area:1/3; background:transparent!important; box-shadow:none!important; }
+#dpad-corner-bl { grid-area:3/1; background:transparent!important; box-shadow:none!important; }
+#dpad-corner-br { grid-area:3/3; background:transparent!important; box-shadow:none!important; }
+
+#sliders-area { flex:1; display:flex; flex-direction:column; justify-content:center; }
+.slider-panel {
+  background:linear-gradient(160deg,#b8b49e,#a8a490); border-radius:12px; padding:10px 14px 8px;
+  box-shadow:inset 3px 3px 7px rgba(0,0,0,.28), inset -1px -1px 3px rgba(255,255,255,.32);
+}
+.tick-row { height:8px; padding:0 2px; margin-bottom:6px; background:repeating-linear-gradient(to right,#888 0px,#888 1px,transparent 1px,transparent 7px); background-size:calc(100%/13) 100%; }
+
+input[type=range] { width:100%; height:56px; -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
+input[type=range]::-webkit-slider-runnable-track { height:5px; background:linear-gradient(to right,#666,#888); border-radius:3px; box-shadow:inset 2px 2px 5px rgba(0,0,0,.6); }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:18px; height:52px;
+  background:repeating-linear-gradient(to bottom,#444 0px,#444 2px,#111 2px,#111 5px);
+  border-radius:3px; margin-top:-24px;
+  box-shadow:2px 2px 6px rgba(0,0,0,.7), -1px -1px 2px rgba(255,255,255,.15);
+}
+input[type=range]::-moz-range-track { height:5px; background:#777; border-radius:3px; }
+input[type=range]::-moz-range-thumb { width:18px; height:52px; background:repeating-linear-gradient(to bottom,#444 0px,#444 2px,#111 2px,#111 5px); border-radius:3px; border:none; box-shadow:2px 2px 6px rgba(0,0,0,.7); }
+
+.slider-label { text-align:center; font-size:clamp(13px,3.2vw,16px); color:#1a1810; letter-spacing:.05em; margin-top:4px; }
+
+#buttons-row { flex:1; display:flex; justify-content:space-around; align-items:center; padding:0 2px; }
+.action-btn-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.action-btn {
+  width:clamp(38px,12.5vw,54px); height:clamp(38px,12.5vw,54px); border-radius:50%; border:none;
+  background:linear-gradient(145deg,#2e2e2e,#111);
+  box-shadow:3px 3px 8px rgba(0,0,0,.55), -1px -1px 3px rgba(255,255,255,.12), inset 1px 1px 2px rgba(255,255,255,.08);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .1s; color:#888;
+}
+.action-btn:active { box-shadow:inset 2px 2px 7px rgba(0,0,0,.7); transform:scale(.94); }
+.action-btn.active { color:#6aba6a; }
+.action-btn svg { width:44%; height:44%; }
+.btn-label { font-size:clamp(13px,3.5vw,20px); color:#000; font-weight:bold; text-align:center; white-space:nowrap; }
+
+#explain-btn {
+  margin-top:6px; padding:4px 16px;
+  background:transparent; color:#88bb88; border:1px solid #335533;
+  font-family:inherit; font-size:clamp(14px,3.6vw,20px); cursor:pointer; letter-spacing:.05em; border-radius:4px;
+}
+#explain-btn:active { background:rgba(80,160,80,.15); }
+#explain-panel { position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; background:#090f09; gap:10px; padding:12px; }
+#explain-content { flex:1; overflow-y:auto; overflow-x:hidden; width:100%; display:flex; flex-direction:column; gap:12px; align-items:center; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
+#explain-content img { width:100%; max-width:640px; display:block; border-radius:4px; }
+#explain-back-btn { flex-shrink:0; padding:5px 20px; background:transparent; color:#aaddaa; border:1px solid #446644; font-family:inherit; font-size:clamp(14px,3.6vw,20px); cursor:pointer; letter-spacing:.05em; border-radius:4px; }
+#explain-back-btn:active { background:rgba(100,180,100,.15); }
+#lightbox { position:fixed; inset:0; z-index:10001; background:rgba(0,0,0,.97); overflow:auto; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y; cursor:zoom-out; display:flex; align-items:flex-start; justify-content:flex-start; }
+#lightbox img { display:block; width:auto; height:auto; min-width:100%; }
+
+body.screen-only #gameboy { width:100vw; height:100dvh; padding:0; border-radius:0; box-shadow:none; background:#000; gap:0; }
+body.screen-only #gameboy::after { display:none; }
+body.screen-only #screen-wrapper { flex:1 1 100%; border-radius:0; box-shadow:none; cursor:pointer; }
+body.screen-only #controls { display:none; }
+body.screen-only #screen-wrapper::before { display:none; }
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <div>ロード中...</div>
-  <div id="pbar"><div id="pfill"></div></div>
-</div>
+<div id="gameboy">
+  <div id="screen-wrapper">
+    <div id="loading-screen">
+      <div>ロード中...</div>
+      <div id="load-progress"></div>
+    </div>
 
-<div id="overlay">
-  <h1>Driving in Tokyo</h1>
-  <div class="controls">
-    <div class="ctrl-row"><span class="ctrl-key">マウス</span><span class="ctrl-sep">/</span><span class="ctrl-desc">視点移動、進行方向</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">Space</span><span class="ctrl-sep">/</span><span class="ctrl-desc">アクセル（離すと速度維持）</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">B</span><span class="ctrl-sep">/</span><span class="ctrl-desc">減速（離すと速度維持）</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">W / E</span><span class="ctrl-sep">/</span><span class="ctrl-desc">空の色相</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">R / T</span><span class="ctrl-sep">/</span><span class="ctrl-desc">空の明暗</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">S / D</span><span class="ctrl-sep">/</span><span class="ctrl-desc">地平線の色相</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">F / G</span><span class="ctrl-sep">/</span><span class="ctrl-desc">地平線の明暗</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">H</span><span class="ctrl-sep">/</span><span class="ctrl-desc">星のON/OFF</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">J</span><span class="ctrl-sep">/</span><span class="ctrl-desc">雨のON/OFF</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">↑↓</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music、選択</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">←→</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music、巻き戻し・早送り</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">Y</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music、再生・停止</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">A</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music表記、表示・非表示</span></div>
-    <div class="ctrl-row"><span class="ctrl-key">ESC</span><span class="ctrl-sep">/</span><span class="ctrl-desc">ゲーム中断、タイトル・操作説明画面</span></div>
+    <div id="start-overlay" style="display:none">
+      <h1>Driving in Tokyo</h1>
+      <div id="audio-load-msg">読み込み中・・・</div>
+      <button id="start-btn" disabled>DRIVE START</button>
+    </div>
+
+    <div id="sound-panel">
+      <h2>── 音量設定 ──</h2>
+      <div class="vol-block">
+        <label>エンジン</label>
+        <div class="vol-block-slider">
+          <input type="range" id="engine-vol" min="0" max="100" value="70">
+          <span id="engine-vol-lbl">70%</span>
+        </div>
+      </div>
+      <div class="vol-block">
+        <label>Music</label>
+        <div class="vol-block-slider">
+          <input type="range" id="yt-vol" min="0" max="100" value="70">
+          <span id="yt-vol-lbl">70%</span>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="crosshair">+</div>
+    <div id="hud">
+      <span><span id="hud-speed">0</span> km/h</span>
+      <span id="hud-auto" style="display:none;color:#6aba6a;">AUTO</span>
+      <span id="hud-coords" style="opacity:.7"></span>
+    </div>
+    <div id="track-bar"></div>
+    <div id="connecting-bar"></div>
   </div>
 
-  <div class="vol-section">
-    <h2>── 音量設定 ──</h2>
-    <div class="vol-row">
-      <label>エンジン音</label>
-      <input type="range" id="engine-vol" min="0" max="100" value="70">
-      <span id="engine-vol-lbl">70%</span>
-    </div>
-    <div class="vol-row">
-      <label>music音</label>
-      <input type="range" id="yt-vol" min="0" max="100" value="70">
-      <span id="yt-vol-lbl">70%</span>
-    </div>
-    <div id="now-playing"></div>
-  </div>
+  <div id="controls">
+    <div id="controls-mid">
+      <div id="dpad-housing">
+        <div id="dpad">
+          <div id="dpad-corner-tl"></div>
+          <button id="dpad-up"    class="dpad-btn"><span class="dpad-arrow">▲</span></button>
+          <div id="dpad-corner-tr"></div>
+          <button id="dpad-left"  class="dpad-btn"><span class="dpad-arrow">◀</span></button>
+          <div    id="dpad-center" class="dpad-btn"><span class="dpad-arrow" style="color:#555">●</span></div>
+          <button id="dpad-right" class="dpad-btn"><span class="dpad-arrow">▶</span></button>
+          <div id="dpad-corner-bl"></div>
+          <button id="dpad-down"  class="dpad-btn"><span class="dpad-arrow">▼</span></button>
+          <div id="dpad-corner-br"></div>
+        </div>
+      </div>
 
-  <div class="vol-section">
-    <h2>── 空の色 ──</h2>
-    <div class="vol-row">
-      <label>空　色相</label>
-      <input type="range" id="sky-hue" min="0" max="360" value="213">
-      <span id="sky-hue-lbl">213°</span>
+      <div id="sliders-area">
+        <div class="slider-panel">
+          <div class="tick-row"></div>
+          <input type="range" id="speed-slider" min="0" max="100" value="0">
+          <div class="slider-label">スピード</div>
+        </div>
+      </div>
     </div>
-    <div class="vol-row">
-      <label>空　明暗</label>
-      <input type="range" id="sky-lgt" min="2" max="97" value="76">
-      <span id="sky-lgt-lbl">76%</span>
-    </div>
-    <div class="vol-row">
-      <label>地平線色相</label>
-      <input type="range" id="hor-hue" min="0" max="360" value="210">
-      <span id="hor-hue-lbl">210°</span>
-    </div>
-    <div class="vol-row">
-      <label>地平線明暗</label>
-      <input type="range" id="hor-lgt" min="2" max="97" value="79">
-      <span id="hor-lgt-lbl">79%</span>
-    </div>
-    <div style="display:flex;gap:24px;margin-top:0.6em;font-size:0.85rem;">
-      <label style="cursor:pointer;user-select:none;">
-        <input type="checkbox" id="rain-cb" style="margin-right:0.3em;vertical-align:middle;">雨
-      </label>
-      <label style="cursor:pointer;user-select:none;">
-        <input type="checkbox" id="star-cb" style="margin-right:0.3em;vertical-align:middle;">星
-      </label>
-    </div>
-  </div>
 
-  <div style="margin:0.8em 0 0.4em; font-size:0.95rem;">
-    <label style="cursor:pointer; user-select:none;">
-      <input type="checkbox" id="auto-drive" style="margin-right:0.4em; width:1em; height:1em; vertical-align:middle;">
-      自動運転
-    </label>
+    <div id="buttons-row">
+      <div class="action-btn-wrap">
+        <span class="btn-label">再生</span>
+        <button class="action-btn active" id="btn-play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+      </div>
+      <div class="action-btn-wrap">
+        <span class="btn-label" id="lbl-hud">非表示</span>
+        <button class="action-btn active" id="btn-hud">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      <div class="action-btn-wrap">
+        <span class="btn-label">自動</span>
+        <button class="action-btn" id="btn-auto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="7" rx="2"/>
+            <path d="M5 11l2-5h10l2 5"/>
+            <circle cx="7.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/>
+            <circle cx="16.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
+      </div>
+      <div class="action-btn-wrap">
+        <span class="btn-label">音量</span>
+        <button class="action-btn active" id="btn-sound">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 9v6h4l5 5V4L7 9H3z"/>
+            <path d="M16.5 12A4.5 4.5 0 0014 7.97v8.06c1.48-.73 2.5-2.25 2.5-4.03z" opacity=".7"/>
+          </svg>
+        </button>
+      </div>
+      <div class="action-btn-wrap">
+        <span class="btn-label">全画面</span>
+        <button class="action-btn" id="btn-fs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M3 16v3a2 2 0 002 2h3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
-  <button id="start-btn">DRIVE START</button>
 </div>
 
 <!-- YouTube プレイヤー（画面外） -->
@@ -161,11 +309,6 @@
   <div id="yt-container"></div>
 </div>
 
-<div id="crosshair"></div>
-<div id="connecting">接続中・・・</div>
-<div id="coords"></div>
-
-<!-- hls.js (ラジオストリーム用) -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script type="importmap">
 { "imports": {
@@ -177,15 +320,14 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// ── 基本設定 ──────────────────────────────────────────────────────────────
+// ── 基本設定
 let EYE_HEIGHT = 1.5;
 const WALK_SPEED = 5;
 const RUN_SPEED  = 15;
-const MAX_STEP   = 0.6;
 const PLAYER_R   = 0.3;
 
 const PLAY_X_MIN = 0.5, PLAY_X_MAX = 6.7;
-const PLAY_Z_MIN = -233,  PLAY_Z_MAX = 1;
+const PLAY_Z_MIN = -233, PLAY_Z_MAX = 1;
 
 const MAX_CRUISE = 33;
 const ACCEL_RATE = 5;
@@ -193,7 +335,7 @@ const DECEL_RATE = 10;
 let cruiseSpeed  = 0;
 let autoDrive    = false;
 
-// ── 特殊モデル制御 ─────────────────────────────────────────────────────────
+// ── 特殊モデル
 let saModelMain = null, saModelCopy = null, saModelCopy2 = null;
 let model02 = null, model02Copy = null, model02Copy2 = null;
 let model03 = null, model03Copy = null, model03Copy2 = null;
@@ -218,34 +360,40 @@ const CAR_SCHEDULE = [
   { t: 1560, model: 'car01', kmh:  70, dur: 120 },
 ];
 const SCHEDULE_LOOP = 1800;
-let firedEntries    = new Set();
+let firedEntries = new Set();
 let scheduleLoopCount = 0;
-const activeCarMap  = new Map();
+const activeCarMap = new Map();
 let frameDt = 0;
 let loopCount = 0;
 let swapTriggerZ = -233;
 const _ambientWhite  = new THREE.Color(1, 1, 1);
 const _ambientTarget = new THREE.Color();
 const LOOP_SEQUENCE = [
-  // row1: 01 01 02 01 01 01 03 02 01 03 04 05 01 05 05 01 01 02 03 03 02 01 01 01 01 06 01 01 01 03 07
   'ty01','ty01','ty02','ty01','ty01','ty01','ty03','ty02','ty01','ty03','ty04','ty05','ty01','ty05','ty05','ty01','ty01','ty02','ty03','ty03','ty02','ty01','ty01','ty01','ty01','ty06','ty01','ty01','ty01','ty03','ty07',
-  // row2: 01 01 01 01 02 01 01 03 01 01 04 05 01 01 05 01 01 06 06 05 01 01 01 01 07 01 01 01 01 03 03
   'ty01','ty01','ty01','ty01','ty02','ty01','ty01','ty03','ty01','ty01','ty04','ty05','ty01','ty01','ty05','ty01','ty01','ty06','ty06','ty05','ty01','ty01','ty01','ty01','ty07','ty01','ty01','ty01','ty01','ty03','ty03',
 ];
 
-// ── レンダラー ────────────────────────────────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+// ── レンダラー（#gameCanvas を使用）
+const canvas = document.getElementById('gameCanvas');
+const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-document.body.appendChild(renderer.domElement);
 
-// ── シーン ────────────────────────────────────────────────────────────────
+const screenWrapper = document.getElementById('screen-wrapper');
+function resizeRenderer() {
+  const w = screenWrapper.clientWidth;
+  const h = screenWrapper.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+// ── シーン
 const scene = new THREE.Scene();
 scene.background = null;
 scene.fog = new THREE.FogExp2(0x030305, 0.007);
 
-// ── 空グラデーションシェーダー ────────────────────────────────────────────
+// ── 空グラデーション
 const skyUniforms = {
   topColor:         { value: new THREE.Color(0x4a6fa0) },
   horizonColor:     { value: new THREE.Color(0xc8daf0) },
@@ -253,72 +401,41 @@ const skyUniforms = {
 };
 const skyMat = new THREE.ShaderMaterial({
   uniforms: skyUniforms,
-  vertexShader: `
-    varying vec3 vPos;
-    void main(){ vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
-  `,
+  vertexShader: `varying vec3 vPos; void main(){ vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform vec3 topColor;
-    uniform vec3 horizonColor;
-    uniform vec3 horizonBandColor;
-    varying vec3 vPos;
+    uniform vec3 topColor; uniform vec3 horizonColor; uniform vec3 horizonBandColor; varying vec3 vPos;
     void main(){
       float h = clamp(normalize(vPos).y, 0.0, 1.0);
       float bandBlend = smoothstep(0.0, 0.11, h);
       vec3 lower = mix(horizonBandColor, horizonColor, bandBlend);
       gl_FragColor = vec4(mix(lower, topColor, pow(h, 0.6)), 1.0);
-    }
-  `,
-  side: THREE.BackSide,
-  depthWrite: false,
-  depthTest: false,
+    }`,
+  side: THREE.BackSide, depthWrite: false, depthTest: false,
 });
 const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(490, 32, 15), skyMat);
-skyMesh.renderOrder = -1;
-skyMesh.frustumCulled = false;
+skyMesh.renderOrder = -1; skyMesh.frustumCulled = false;
 scene.add(skyMesh);
 
 let skyTopTarget       = new THREE.Color(0x4a6fa0);
 let skyHorizTarget     = new THREE.Color(0xc8daf0);
 let skyHorizBandTarget = new THREE.Color(0xc8daf0);
-
-// ── 空色調整パラメータ ───────────────────────────────────────────────────
 let skyH = 0.592, skyS = 0.63, skyL = 0.76;
 let horizH = 0.583, horizS = 0.24, horizL = 0.79;
 let lastColorT = 0;
-
-function syncSkySliders() {
-  const sH = document.getElementById('sky-hue');
-  const sL = document.getElementById('sky-lgt');
-  const hH = document.getElementById('hor-hue');
-  const hL = document.getElementById('hor-lgt');
-  if (!sH) return;
-  const sv = Math.round(skyH * 360), sl = Math.round(skyL * 100);
-  const hv = Math.round(horizH * 360), hl = Math.round(horizL * 100);
-  sH.value = sv; document.getElementById('sky-hue-lbl').textContent = sv + '°';
-  sL.value = sl; document.getElementById('sky-lgt-lbl').textContent = sl + '%';
-  hH.value = hv; document.getElementById('hor-hue-lbl').textContent = hv + '°';
-  hL.value = hl; document.getElementById('hor-lgt-lbl').textContent = hl + '%';
-}
 
 function rebuildSkyColors() {
   const skyBase = new THREE.Color().setHSL(skyH, skyS, skyL);
   skyTopTarget.copy(skyBase).multiplyScalar(0.42);
   skyHorizTarget.setHSL(horizH, horizS, horizL);
   skyHorizBandTarget.copy(skyHorizTarget);
-  syncSkySliders();
 }
 
 function setSkyFromColor(hex, solid = false) {
   const base = new THREE.Color(hex);
   skyTopTarget.copy(base).multiplyScalar(0.42);
-  if (solid) {
-    skyHorizTarget.copy(skyTopTarget);
-  } else {
-    skyHorizTarget.copy(base).lerp(new THREE.Color(0xddd8c8), 0.52);
-  }
+  if (solid) { skyHorizTarget.copy(skyTopTarget); }
+  else { skyHorizTarget.copy(base).lerp(new THREE.Color(0xddd8c8), 0.52); }
   skyHorizBandTarget.copy(skyHorizTarget);
-  // HSLパラメータを同期
   const hsl = {}; base.getHSL(hsl);
   skyH = hsl.h; skyS = hsl.s; skyL = hsl.l;
   skyHorizTarget.getHSL(hsl);
@@ -330,79 +447,62 @@ function setSkyHorizBand(hex) {
 }
 setSkyFromColor('#9bbae8');
 
-// ── カメラ ────────────────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 500);
+// ── カメラ
+const camera = new THREE.PerspectiveCamera(70, 1, 0.01, 500);
 camera.rotation.order = 'YXZ';
 
-// ── ライト ────────────────────────────────────────────────────────────────
+// ── ライト
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambientLight);
 const sun = new THREE.DirectionalLight(0xffffff, 0.5);
 sun.position.set(50, 100, 50);
 scene.add(sun);
 
-// ── YouTube プレイヤー ────────────────────────────────────────────────────
-let ytPlayer       = null;
-let ytReady        = false;
-let currentVolAdj  = 1.0; // 音量補正係数（例: 0.8 / 1.1）
-let gpDpadUpPrev    = false;
-let gpDpadDownPrev  = false;
-let gpDpadLeftPrev  = false;
-let gpDpadRightPrev = false;
-let gpBtnYPrev      = false;
-let gpBtnAPrev      = false;
-let gpBtnBPrev      = false;
-let gpSelectPrev    = false;
+// ── YouTube / プレイリスト
+let ytPlayer = null, ytReady = false, currentVolAdj = 1.0;
+let playlist = [], playlistIdx = 0;
+let musicLabelEnabled = true, isBrowsing = false;
 
-// プレイリスト
-let playlist      = [];
-let playlistIdx   = 0;
-let ytSelectTimer = null;
-let musicLabelEnabled = true;
-let isBrowsing        = false;
-
-async function loadPlaylist() {
-  try {
-    const text = await (await fetch('musiclist.txt')).text();
-    const entries = text.split('\n')
-      .map(l => l.trim()).filter(l => l && !l.startsWith('#'))
-      .map(l => {
-        const urlMatch = l.match(/https?:\/\/[^「\s]+/);
-        if (!urlMatch) return { type: 'label', name: l, id: null };
-        const urlPart = urlMatch[0];
-        const rest    = l.slice(urlMatch.index + urlPart.length).trim();
-        const nameMatch = rest.match(/「([^」]*)」/);
-        const name  = nameMatch ? nameMatch[1] : '';
-        const keywords = rest.replace(/「[^」]*」/, '');
-        const colorMatch = keywords.match(/#[0-9a-fA-F]{6}/);
-        const color = colorMatch ? colorMatch[0] : null;
-        const rain  = /雨/.test(keywords);
-        const star  = /星/.test(keywords);
-        const solid = /単色/.test(keywords);
-        const horizMatch = keywords.match(/地平線(#[0-9a-fA-F]{6})/);
-        const horiz = horizMatch ? horizMatch[1] : null;
-        const volMatch = keywords.match(/音量([+-]\d+)%/);
-        const volAdj = volMatch ? 1 + parseInt(volMatch[1]) / 100 : 1.0;
-        const cleanUrl = urlPart.replace(/&amp;/g, '&');
-        const isYT = /youtube\.com|youtu\.be/.test(cleanUrl);
-        const vid  = isYT ? (cleanUrl.match(/[?&]v=([^&]+)/)?.[1] || cleanUrl) : cleanUrl;
-        return { id: vid, type: isYT ? 'yt' : 'radio', name, color, rain, star, solid, horiz, volAdj };
-      });
-    const valid = entries.filter(Boolean);
-    if (valid.length > 0) { playlist = valid; console.log('[playlist]', valid.length, 'tracks'); }
-  } catch(e) { console.warn('[playlist] musiclist.txt 読み込み失敗、デフォルト使用'); }
-}
-
-const nowPlayingEl  = document.getElementById('now-playing');
-const connectingEl  = document.getElementById('connecting');
+const trackBarEl     = document.getElementById('track-bar');
+const connectingEl   = document.getElementById('connecting-bar');
+const nowPlayingEl   = trackBarEl;
 
 const decisionSE = new Audio('music/決定ボタンを押す7.mp3');
 
 function trackLabel(entry) {
   if (!entry.name) return entry.id;
   const comma = entry.name.indexOf(',');
-  if (comma === -1) return entry.name;
-  return `${entry.name.slice(0, comma).trim()} - ${entry.name.slice(comma + 1).trim()}`;
+  return comma === -1 ? entry.name : `${entry.name.slice(0, comma).trim()} - ${entry.name.slice(comma + 1).trim()}`;
+}
+
+async function loadPlaylist() {
+  try {
+    const text = await (await fetch('musiclist.txt')).text();
+    const entries = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')).map(l => {
+      const urlMatch = l.match(/https?:\/\/[^「\s]+/);
+      if (!urlMatch) return { type: 'label', name: l, id: null };
+      const urlPart = urlMatch[0];
+      const rest    = l.slice(urlMatch.index + urlPart.length).trim();
+      const nameMatch  = rest.match(/「([^」]*)」/);
+      const name       = nameMatch ? nameMatch[1] : '';
+      const keywords   = rest.replace(/「[^」]*」/, '');
+      const colorMatch = keywords.match(/#[0-9a-fA-F]{6}/);
+      const color      = colorMatch ? colorMatch[0] : null;
+      const rain       = /雨/.test(keywords);
+      const star       = /星/.test(keywords);
+      const solid      = /単色/.test(keywords);
+      const horizMatch = keywords.match(/地平線(#[0-9a-fA-F]{6})/);
+      const horiz      = horizMatch ? horizMatch[1] : null;
+      const volMatch   = keywords.match(/音量([+-]\d+)%/);
+      const volAdj     = volMatch ? 1 + parseInt(volMatch[1]) / 100 : 1.0;
+      const cleanUrl   = urlPart.replace(/&amp;/g, '&');
+      const isYT       = /youtube\.com|youtu\.be/.test(cleanUrl);
+      const vid        = isYT ? (cleanUrl.match(/[?&]v=([^&]+)/)?.[1] || cleanUrl) : cleanUrl;
+      return { id: vid, type: isYT ? 'yt' : 'radio', name, color, rain, star, solid, horiz, volAdj };
+    });
+    const valid = entries.filter(Boolean);
+    if (valid.length > 0) { playlist = valid; }
+  } catch(e) { console.warn('[playlist] musiclist.txt 読み込み失敗'); }
 }
 
 function selectTrack(delta) {
@@ -410,31 +510,22 @@ function selectTrack(delta) {
   playlistIdx = ((playlistIdx + delta) % playlist.length + playlist.length) % playlist.length;
   const entry = playlist[playlistIdx];
   isBrowsing = entry.type !== 'label';
-  if (musicLabelEnabled) {
-    connectingEl.style.display = 'block';
-    connectingEl.textContent   = entry.type === 'label'
-      ? `── ${entry.name} ──`
-      : trackLabel(entry);
-  }
+  connectingEl.style.display = 'block';
+  connectingEl.textContent   = entry.type === 'label' ? `── ${entry.name} ──` : trackLabel(entry);
 }
 
 function confirmTrack() {
   if (!isBrowsing) return;
   isBrowsing = false;
   const entry = playlist[playlistIdx];
-  decisionSE.currentTime = 0;
-  decisionSE.play().catch(() => {});
-  if (musicLabelEnabled) {
-    connectingEl.style.display = 'block';
-    connectingEl.textContent = `${trackLabel(entry)}　接続中・・・`;
-  }
+  decisionSE.currentTime = 0; decisionSE.play().catch(() => {});
+  connectingEl.style.display = 'block';
+  connectingEl.textContent   = `${trackLabel(entry)}　接続中・・・`;
   if (entry.color) setSkyFromColor(entry.color, !!entry.solid);
   setSkyHorizBand(entry.horiz);
-  rainActive = !!entry.rain;
-  starActive = !!entry.star;
+  rainActive = !!entry.rain; starActive = !!entry.star;
   currentVolAdj = entry.volAdj ?? 1.0;
-  if (nowPlayingEl) nowPlayingEl.textContent = `▶  ${trackLabel(entry)}`;
-
+  nowPlayingEl.textContent = `▶  ${trackLabel(entry)}`;
   if (entry.type === 'radio') {
     if (ytReady && ytPlayer) ytPlayer.stopVideo();
     playRadio(entry.id);
@@ -460,27 +551,21 @@ function loadYTApi() {
 async function initYTPlayer() {
   try {
     await loadYTApi();
-    console.log('[YT] API loaded');
     ytPlayer = await new Promise((resolve, reject) => {
       new YT.Player('yt-container', {
         width: 400, height: 300,
         playerVars: { autoplay: 0, controls: 0, fs: 0 },
         events: {
-          onReady: e => { ytReady = true; console.log('[YT] player ready'); resolve(e.target); },
+          onReady: e => { ytReady = true; resolve(e.target); },
           onStateChange: e => {
             if (e.data === 1) { connectingEl.style.display = 'none'; isBrowsing = false; }
-            if (e.data === 0) { // 曲終了 → 音量リセット
-              currentVolAdj = 1.0;
-              ytPlayer.setVolume(parseInt(ytVolSlider.value));
-            }
+            if (e.data === 0) { currentVolAdj = 1.0; ytPlayer.setVolume(parseInt(ytVolSlider.value)); }
           },
-          onError: e => { console.error('[YT] error:', e.data); reject(e.data); },
+          onError: e => reject(e.data),
         }
       });
     });
-  } catch(e) {
-    console.error('[YT] init failed:', e);
-  }
+  } catch(e) { console.error('[YT] init failed:', e); }
 }
 
 function seekYT(sec) {
@@ -489,30 +574,22 @@ function seekYT(sec) {
 }
 
 function toggleYt() {
-  if (radioActive) {
-    radioAudio.paused ? radioAudio.play().catch(console.error) : radioAudio.pause();
-    return;
-  }
+  if (radioActive) { radioAudio.paused ? radioAudio.play().catch(console.error) : radioAudio.pause(); return; }
   if (!ytReady || !ytPlayer) return;
   ytPlayer.getPlayerState() === 1 ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
 }
 
-// ── BGM (Web Audio API ギャップレスループ) ───────────────────────────────
-let audioCtx     = null;
-let masterGain   = null;
-const audioBufs  = {};
-let playingSrc   = null;
-let playingKey   = null;
+// ── BGM
+let audioCtx = null, masterGain = null;
+const audioBufs = {};
+let playingSrc = null, playingKey = null;
 
 async function initAudio() {
   audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
   masterGain = audioCtx.createGain();
-  masterGain.gain.value = 0.7;
+  masterGain.gain.value = parseInt(engineVolSlider.value) / 100;
   masterGain.connect(audioCtx.destination);
-  const urls = {
-    freeway1: 'music/drive_on_freeway1.mp3',
-    freeway2: 'music/drive_on_freeway2.mp3',
-  };
+  const urls = { freeway1: 'music/drive_on_freeway1.mp3', freeway2: 'music/drive_on_freeway2.mp3' };
   await Promise.all(Object.entries(urls).map(async ([k, url]) => {
     const ab = await (await fetch(url)).arrayBuffer();
     audioBufs[k] = await audioCtx.decodeAudioData(ab);
@@ -525,119 +602,71 @@ function playBgm(key) {
   playingKey = key;
   if (!key || !audioBufs[key]) return;
   const src = audioCtx.createBufferSource();
-  src.buffer = audioBufs[key];
-  src.loop   = true;
-  src.connect(masterGain);
-  src.start(0);
+  src.buffer = audioBufs[key]; src.loop = true;
+  src.connect(masterGain); src.start(0);
   playingSrc = src;
 }
 
-function updateCruiseBgm() {
-  playBgm(cruiseSpeed > 14 ? 'freeway2' : 'freeway1');
-}
+function updateCruiseBgm() { playBgm(cruiseSpeed > 14 ? 'freeway2' : 'freeway1'); }
 
-
-// ── 雨システム ────────────────────────────────────────────────────────────
+// ── 雨
 let rainActive = false;
 {
   const CNT = 5000, SPR = 5, TOP = 10, SPD = 0.3, LEN = 0.2;
   const pos = new Float32Array(CNT * 6);
   for (let i = 0; i < CNT; i++) {
-    const x = (Math.random() - 0.5) * SPR * 2;
-    const y = Math.random() * TOP;
-    const z = (Math.random() - 0.5) * SPR * 2;
-    const b = i * 6;
-    pos[b]=x; pos[b+1]=y; pos[b+2]=z; pos[b+3]=x; pos[b+4]=y-LEN; pos[b+5]=z;
+    const x=(Math.random()-.5)*SPR*2, y=Math.random()*TOP, z=(Math.random()-.5)*SPR*2, b=i*6;
+    pos[b]=x;pos[b+1]=y;pos[b+2]=z;pos[b+3]=x;pos[b+4]=y-LEN;pos[b+5]=z;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   var rainSystem = new THREE.LineSegments(geo,
-    new THREE.LineBasicMaterial({ color: 0xaaccff, transparent: true, opacity: 1.0, depthWrite: false }));
-  rainSystem.visible = false;
-  rainSystem.frustumCulled = false;
-  scene.add(rainSystem);
-
+    new THREE.LineBasicMaterial({ color:0xaaccff, transparent:true, opacity:1.0, depthWrite:false }));
+  rainSystem.visible = false; rainSystem.frustumCulled = false; scene.add(rainSystem);
   window._updateRain = function() {
     rainSystem.visible = rainActive;
     if (!rainActive) return;
     const p = rainSystem.geometry.attributes.position.array;
-    for (let i = 0; i < CNT; i++) {
-      const b = i * 6;
-      p[b+1] -= SPD; p[b+4] -= SPD;
-      if (p[b+4] < -1) {
-        const x = (Math.random()-0.5)*SPR*2, z = (Math.random()-0.5)*SPR*2, y = TOP + Math.random()*4;
-        p[b]=x; p[b+1]=y; p[b+2]=z; p[b+3]=x; p[b+4]=y-LEN; p[b+5]=z;
-      }
+    for (let i=0;i<CNT;i++) {
+      const b=i*6; p[b+1]-=SPD; p[b+4]-=SPD;
+      if (p[b+4]<-1) { const x=(Math.random()-.5)*SPR*2,z=(Math.random()-.5)*SPR*2,y=TOP+Math.random()*4; p[b]=x;p[b+1]=y;p[b+2]=z;p[b+3]=x;p[b+4]=y-LEN;p[b+5]=z; }
     }
     rainSystem.geometry.attributes.position.needsUpdate = true;
-    rainSystem.position.set(camera.position.x, 0, camera.position.z);
+    rainSystem.position.set(camera.position.x,0,camera.position.z);
   };
 }
 
-// ── 星システム ────────────────────────────────────────────────────────────
+// ── 星
 let starActive = false;
 {
-  const CNT = 2000, R = 480;
-  const pos = new Float32Array(CNT * 3);
-  for (let i = 0; i < CNT; i++) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi   = Math.random() * Math.PI * 0.5; // 上半球のみ
-    pos[i*3]   = R * Math.sin(phi) * Math.cos(theta);
-    pos[i*3+1] = R * Math.cos(phi);
-    pos[i*3+2] = R * Math.sin(phi) * Math.sin(theta);
+  const CNT=2000, R=480;
+  const pos = new Float32Array(CNT*3);
+  for (let i=0;i<CNT;i++) {
+    const theta=Math.random()*Math.PI*2, phi=Math.random()*Math.PI*.5;
+    pos[i*3]=R*Math.sin(phi)*Math.cos(theta); pos[i*3+1]=R*Math.cos(phi); pos[i*3+2]=R*Math.sin(phi)*Math.sin(theta);
   }
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
   var starSystem = new THREE.Points(geo,
-    new THREE.PointsMaterial({ color: 0xffffff, size: 1.1, sizeAttenuation: false, depthWrite: false, fog: false }));
-  starSystem.visible = false;
-  starSystem.frustumCulled = false;
-  scene.add(starSystem);
-
+    new THREE.PointsMaterial({ color:0xffffff, size:1.1, sizeAttenuation:false, depthWrite:false, fog:false }));
+  starSystem.visible = false; starSystem.frustumCulled = false; scene.add(starSystem);
   window._updateStars = function() {
     starSystem.visible = starActive;
     if (starActive) starSystem.position.copy(camera.position);
   };
 }
 
-
-// ── 入力 ─────────────────────────────────────────────────────────────────
-let yaw = 0, pitch = 0.18, cameraRoll = 0, pitchGForce = 0, locked = false;
+// ── 入力
+let yaw = 0, pitch = 0.18, cameraRoll = 0, pitchGForce = 0;
+let gameStarted = false;
 const PITCH_ACCEL_MAX =  7.5 * Math.PI / 180;
 const PITCH_BRAKE_MAX = -(8 / 3) * Math.PI / 180;
-const keys      = {};
-const crosshair = document.getElementById('crosshair');
-const dbg       = document.getElementById('debug');
+const keys = {};
 
-document.addEventListener('pointerlockchange', () => {
-  locked = document.pointerLockElement === document.body;
-  crosshair.classList.toggle('show', locked);
-  if (!locked) overlay.classList.remove('hidden');
-});
-document.addEventListener('mousemove', e => {
-  if (!locked) return;
-  yaw        -= e.movementX * 0.002;
-  pitch      -= e.movementY * 0.002;
-  pitch       = Math.max(-1.3, Math.min(1.3, pitch));
-  cameraRoll -= e.movementX * 0.00025;
-  cameraRoll  = Math.max(-0.18, Math.min(0.18, cameraRoll));
-  camera.rotation.set(pitch + pitchGForce, yaw, cameraRoll);
-});
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (e.code === 'Escape' && locked) document.exitPointerLock();
-  if (e.code === 'Space') {
-    e.preventDefault();
-  }
-  if (e.code === 'KeyY' && !e.repeat) {
-    if (connectingEl.style.display === 'block') confirmTrack();
-    else toggleYt();
-  }
-  if (e.code === 'KeyA' && !e.repeat) {
-    musicLabelEnabled = !musicLabelEnabled;
-    document.getElementById('coords').style.display = musicLabelEnabled ? 'block' : 'none';
-    if (!musicLabelEnabled) connectingEl.style.display = 'none';
-  }
+  if (e.code === 'Space') e.preventDefault();
+  if (e.code === 'KeyY' && !e.repeat) { if (connectingEl.style.display==='block') confirmTrack(); else toggleYt(); }
   if (e.code === 'KeyH' && !e.repeat) starActive = !starActive;
   if (e.code === 'KeyJ' && !e.repeat) rainActive = !rainActive;
   if (e.code === 'ArrowUp'    && !e.repeat) { selectTrack(-1); e.preventDefault(); }
@@ -647,12 +676,38 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-// ── ループ定数 ────────────────────────────────────────────────────────────
+// ── タッチ操作（スワイプで視点移動）
+{
+  let tx0 = 0, ty0 = 0, dragging = false;
+  screenWrapper.addEventListener('pointerdown', e => {
+    if (!gameStarted) return;
+    tx0 = e.clientX; ty0 = e.clientY; dragging = true;
+    screenWrapper.setPointerCapture(e.pointerId);
+  });
+  screenWrapper.addEventListener('pointermove', e => {
+    if (!dragging || !gameStarted) return;
+    const dx = e.clientX - tx0, dy = e.clientY - ty0;
+    tx0 = e.clientX; ty0 = e.clientY;
+    yaw        -= dx * 0.003;
+    pitch      -= dy * 0.003;
+    pitch       = Math.max(-1.3, Math.min(1.3, pitch));
+    cameraRoll -= dx * 0.0004;
+    cameraRoll  = Math.max(-0.18, Math.min(0.18, cameraRoll));
+    camera.rotation.set(pitch + pitchGForce, yaw, cameraRoll);
+  });
+  screenWrapper.addEventListener('pointerup',    () => dragging = false);
+  screenWrapper.addEventListener('pointerleave', () => dragging = false);
+
+  // screen-only モードでタップ → 通常に戻る
+  screenWrapper.addEventListener('click', () => {
+    if (document.body.classList.contains('screen-only')) document.body.classList.remove('screen-only');
+  });
+}
+
+// ── ループ定数
 const LOOP_LENGTH = 234;
 const zoneRocks = new Map();
-
-// ── 特殊モデル ロード・切替 ────────────────────────────────────────────────
-const GLB_DARK = 0.5; // 構築物マテリアル暗化係数
+const GLB_DARK = 0.5;
 
 function loadSpecialModel(filename, px, py, pz) {
   return new Promise(resolve => {
@@ -664,592 +719,372 @@ function loadSpecialModel(filename, px, py, pz) {
         if (!child.isMesh) return;
         const fixMat = mat => {
           if (!mat) return;
-          if (mat.color && mat.color.r > 0.6 && mat.color.g < 0.35 && mat.color.b > 0.5) {
-            child.visible = false; return;
-          }
+          if (mat.color && mat.color.r > 0.6 && mat.color.g < 0.35 && mat.color.b > 0.5) { child.visible = false; return; }
           mat.transparent = false; mat.opacity = 1; mat.depthWrite = true;
           if (mat.color) mat.color.multiplyScalar(GLB_DARK);
           mat.needsUpdate = true;
         };
         Array.isArray(child.material) ? child.material.forEach(fixMat) : fixMat(child.material);
       });
-      m.scale.set(0.4, 0.4, 0.4);
-      m.position.set(px, py, pz);
-      m.visible = false;
-      scene.add(m);
-      const mCopy = m.clone();
-      mCopy.position.set(px, py, pz - LOOP_LENGTH);
-      mCopy.visible = false;
-      scene.add(mCopy);
-      const mCopy2 = m.clone();
-      mCopy2.position.set(px, py, pz - 2 * LOOP_LENGTH);
-      mCopy2.visible = false;
-      scene.add(mCopy2);
-      resolve({ main: m, copy: mCopy, copy2: mCopy2 });
+      m.scale.set(0.4,0.4,0.4); m.position.set(px,py,pz); m.visible = false; scene.add(m);
+      const mCopy = m.clone(); mCopy.position.set(px,py,pz-LOOP_LENGTH); mCopy.visible=false; scene.add(mCopy);
+      const mCopy2 = m.clone(); mCopy2.position.set(px,py,pz-2*LOOP_LENGTH); mCopy2.visible=false; scene.add(mCopy2);
+      resolve({ main:m, copy:mCopy, copy2:mCopy2 });
     }, null, err => { console.error('[loadSpecialModel]', filename, err); resolve(null); });
   });
 }
 
 function setMainModel(key) {
-  if (saModelMain) saModelMain.visible = (key === 'ty01');
-  if (model02)     model02.visible     = (key === 'ty02');
-  if (model03)     model03.visible     = (key === 'ty03');
-  if (model04)     model04.visible     = (key === 'ty04');
-  if (model05)     model05.visible     = (key === 'ty05');
-  if (model06)     model06.visible     = (key === 'ty06');
-  if (model07)     model07.visible     = (key === 'ty07');
-  for (const [rock, zones] of zoneRocks) {
-    rock.visible = !zones.has(key);
-  }
+  if(saModelMain) saModelMain.visible=(key==='ty01'); if(model02) model02.visible=(key==='ty02');
+  if(model03) model03.visible=(key==='ty03'); if(model04) model04.visible=(key==='ty04');
+  if(model05) model05.visible=(key==='ty05'); if(model06) model06.visible=(key==='ty06');
+  if(model07) model07.visible=(key==='ty07');
+  for(const[rock,zones] of zoneRocks) rock.visible=!zones.has(key);
 }
-
 function setCopyModel(key) {
-  if (saModelCopy)  saModelCopy.visible  = (key === 'ty01');
-  if (model02Copy)  model02Copy.visible  = (key === 'ty02');
-  if (model03Copy)  model03Copy.visible  = (key === 'ty03');
-  if (model04Copy)  model04Copy.visible  = (key === 'ty04');
-  if (model05Copy)  model05Copy.visible  = (key === 'ty05');
-  if (model06Copy)  model06Copy.visible  = (key === 'ty06');
-  if (model07Copy)  model07Copy.visible  = (key === 'ty07');
+  if(saModelCopy) saModelCopy.visible=(key==='ty01'); if(model02Copy) model02Copy.visible=(key==='ty02');
+  if(model03Copy) model03Copy.visible=(key==='ty03'); if(model04Copy) model04Copy.visible=(key==='ty04');
+  if(model05Copy) model05Copy.visible=(key==='ty05'); if(model06Copy) model06Copy.visible=(key==='ty06');
+  if(model07Copy) model07Copy.visible=(key==='ty07');
 }
-
 function setFarCopyModel(key) {
-  if (saModelCopy2)  saModelCopy2.visible  = (key === 'ty01');
-  if (model02Copy2)  model02Copy2.visible  = (key === 'ty02');
-  if (model03Copy2)  model03Copy2.visible  = (key === 'ty03');
-  if (model04Copy2)  model04Copy2.visible  = (key === 'ty04');
-  if (model05Copy2)  model05Copy2.visible  = (key === 'ty05');
-  if (model06Copy2)  model06Copy2.visible  = (key === 'ty06');
-  if (model07Copy2)  model07Copy2.visible  = (key === 'ty07');
+  if(saModelCopy2) saModelCopy2.visible=(key==='ty01'); if(model02Copy2) model02Copy2.visible=(key==='ty02');
+  if(model03Copy2) model03Copy2.visible=(key==='ty03'); if(model04Copy2) model04Copy2.visible=(key==='ty04');
+  if(model05Copy2) model05Copy2.visible=(key==='ty05'); if(model06Copy2) model06Copy2.visible=(key==='ty06');
+  if(model07Copy2) model07Copy2.visible=(key==='ty07');
 }
-
 function resolveSeq(idx) {
-  const key = LOOP_SEQUENCE[((idx % LOOP_SEQUENCE.length) + LOOP_SEQUENCE.length) % LOOP_SEQUENCE.length];
-  if (key === 'ty02' && !model02) return 'ty01';
-  if (key === 'ty03' && !model03) return 'ty01';
-  if (key === 'ty04' && !model04) return 'ty01';
-  if (key === 'ty05' && !model05) return 'ty01';
-  if (key === 'ty06' && !model06) return 'ty01';
-  if (key === 'ty07' && !model07) return 'ty01';
+  const key = LOOP_SEQUENCE[((idx%LOOP_SEQUENCE.length)+LOOP_SEQUENCE.length)%LOOP_SEQUENCE.length];
+  if(key==='ty02'&&!model02) return 'ty01'; if(key==='ty03'&&!model03) return 'ty01';
+  if(key==='ty04'&&!model04) return 'ty01'; if(key==='ty05'&&!model05) return 'ty01';
+  if(key==='ty06'&&!model06) return 'ty01'; if(key==='ty07'&&!model07) return 'ty01';
   return key;
 }
-
 function swapModels() {
-  // copy2 の一つ先へ旧 main を再配置（3スロット循環）
   const newCopy2Z = saModelCopy2.position.z - LOOP_LENGTH;
-  for (const m of [saModelMain, model02, model03, model04, model05, model06, model07]) {
-    if (m) m.position.z = newCopy2Z;
-  }
-
-  // 3スロット循環: main←copy, copy←copy2, copy2←旧main
-  [saModelMain, saModelCopy, saModelCopy2]   = [saModelCopy, saModelCopy2, saModelMain];
-  [model02, model02Copy, model02Copy2]       = [model02Copy, model02Copy2, model02];
-  [model03, model03Copy, model03Copy2]       = [model03Copy, model03Copy2, model03];
-  [model04, model04Copy, model04Copy2]       = [model04Copy, model04Copy2, model04];
-  [model05, model05Copy, model05Copy2]       = [model05Copy, model05Copy2, model05];
-  [model06, model06Copy, model06Copy2]       = [model06Copy, model06Copy2, model06];
-  [model07, model07Copy, model07Copy2]       = [model07Copy, model07Copy2, model07];
+  for(const m of [saModelMain,model02,model03,model04,model05,model06,model07]) { if(m) m.position.z=newCopy2Z; }
+  [saModelMain,saModelCopy,saModelCopy2]=[saModelCopy,saModelCopy2,saModelMain];
+  [model02,model02Copy,model02Copy2]=[model02Copy,model02Copy2,model02];
+  [model03,model03Copy,model03Copy2]=[model03Copy,model03Copy2,model03];
+  [model04,model04Copy,model04Copy2]=[model04Copy,model04Copy2,model04];
+  [model05,model05Copy,model05Copy2]=[model05Copy,model05Copy2,model05];
+  [model06,model06Copy,model06Copy2]=[model06Copy,model06Copy2,model06];
+  [model07,model07Copy,model07Copy2]=[model07Copy,model07Copy2,model07];
 }
-
 function handleLoopTransition() {
   loopCount++;
-  const cur  = resolveSeq(loopCount);
-  const next = resolveSeq(loopCount + 1);
-  const far  = resolveSeq(loopCount + 2);
-  setMainModel(cur);
-  setCopyModel(next);
-  setFarCopyModel(far);
-  console.log(`[loop ${loopCount}] main → ${cur}, copy → ${next}, copy2 → ${far}`);
+  setMainModel(resolveSeq(loopCount)); setCopyModel(resolveSeq(loopCount+1)); setFarCopyModel(resolveSeq(loopCount+2));
 }
-
 function checkSpecialSchedule() {
   if (!gameStartTime) return;
-  const elapsed     = (performance.now() - gameStartTime) / 1000;
-  const cycleCount  = Math.floor(elapsed / SCHEDULE_LOOP);
-  const cycleElapsed = elapsed % SCHEDULE_LOOP;
-  const carModels   = { car01: car01Model, car02: car02Model, car03: car03Model, car04: car04Model };
-
-  if (cycleCount > scheduleLoopCount) {
-    scheduleLoopCount = cycleCount;
-    firedEntries.clear();
-    for (const [m] of activeCarMap) m.visible = false;
-    activeCarMap.clear();
-  }
-
-  for (let i = 0; i < CAR_SCHEDULE.length; i++) {
+  const elapsed      = (performance.now()-gameStartTime)/1000;
+  const cycleCount   = Math.floor(elapsed/SCHEDULE_LOOP);
+  const cycleElapsed = elapsed%SCHEDULE_LOOP;
+  const carModels    = {car01:car01Model,car02:car02Model,car03:car03Model,car04:car04Model};
+  if (cycleCount>scheduleLoopCount) { scheduleLoopCount=cycleCount; firedEntries.clear(); for(const[m] of activeCarMap) m.visible=false; activeCarMap.clear(); }
+  for (let i=0;i<CAR_SCHEDULE.length;i++) {
     if (firedEntries.has(i)) continue;
-    const entry = CAR_SCHEDULE[i];
-    if (cycleElapsed >= entry.t) {
-      const m = carModels[entry.model];
-      if (m) {
-        m.position.set(0, 0, camera.position.z - 20);
-        m.rotation.y = 0;
-        m.visible = true;
-        activeCarMap.set(m, { speed: 27.5 * entry.kmh / 150, endTime: elapsed + entry.dur });
-        console.log('[' + entry.model + '] 登場 ' + entry.kmh + 'km/h');
-      }
+    const entry=CAR_SCHEDULE[i];
+    if (cycleElapsed>=entry.t) {
+      const m=carModels[entry.model];
+      if (m) { m.position.set(0,0,camera.position.z-20); m.rotation.y=0; m.visible=true; activeCarMap.set(m,{speed:27.5*entry.kmh/150,endTime:elapsed+entry.dur}); }
       firedEntries.add(i);
     }
   }
-
-  const toRemove = [];
-  for (const [m, ac] of activeCarMap) {
-    if (elapsed > ac.endTime) {
-      m.visible = false;
-      toRemove.push(m);
-    } else {
-      m.position.z -= ac.speed * frameDt;
-    }
-  }
-  for (const m of toRemove) activeCarMap.delete(m);
+  const toRemove=[];
+  for(const[m,ac] of activeCarMap) { if(elapsed>ac.endTime){m.visible=false;toRemove.push(m);}else{m.position.z-=ac.speed*frameDt;} }
+  for(const m of toRemove) activeCarMap.delete(m);
 }
 
-// ── GLTF ロード ───────────────────────────────────────────────────────────
-const pfill   = document.getElementById('pfill');
-const loading = document.getElementById('loading');
+// ── GLTF ロード
+const loadProgressEl = document.getElementById('load-progress');
+const loadingScreen  = document.getElementById('loading-screen');
+const startOverlay   = document.getElementById('start-overlay');
+const audioLoadMsg   = document.getElementById('audio-load-msg');
 
 new GLTFLoader().load('ty01.glb?v=' + Date.now(), gltf => {
   const model = gltf.scene;
-
   model.frustumCulled = false;
   model.traverse(child => {
     child.frustumCulled = false;
     if (!child.isMesh) return;
     const fix = m => {
       if (!m) return;
-      if (m.color && m.color.r > 0.6 && m.color.g < 0.35 && m.color.b > 0.5) {
-        child.visible = false; return;
-      }
-      m.transparent = false; m.opacity = 1; m.depthWrite = true;
+      if (m.color && m.color.r>0.6 && m.color.g<0.35 && m.color.b>0.5) { child.visible=false; return; }
+      m.transparent=false; m.opacity=1; m.depthWrite=true;
       if (m.color) m.color.multiplyScalar(GLB_DARK);
-      m.needsUpdate = true;
+      m.needsUpdate=true;
     };
     Array.isArray(child.material) ? child.material.forEach(fix) : fix(child.material);
   });
-
-  model.scale.set(0.4, 0.4, 0.4);
+  model.scale.set(0.4,0.4,0.4);
   model.updateMatrixWorld(true);
-
   const box = new THREE.Box3().setFromObject(model);
   const cen = box.getCenter(new THREE.Vector3());
-  model.position.set(0, 0, -cen.z);
+  model.position.set(0,0,-cen.z);
   scene.add(model);
   model.updateMatrixWorld(true);
 
-
-  // シームレスループ用：コピーを2つ作成（3スロット化で遠景を早期表示）
   const modelCopy = model.clone();
-  modelCopy.position.set(model.position.x, model.position.y, model.position.z - LOOP_LENGTH);
+  modelCopy.position.set(model.position.x,model.position.y,model.position.z-LOOP_LENGTH);
   scene.add(modelCopy);
   const modelCopy2 = model.clone();
-  modelCopy2.position.set(model.position.x, model.position.y, model.position.z - 2 * LOOP_LENGTH);
+  modelCopy2.position.set(model.position.x,model.position.y,model.position.z-2*LOOP_LENGTH);
   scene.add(modelCopy2);
 
-  saModelMain = model;
-  saModelCopy = modelCopy;
-  saModelCopy2 = modelCopy2;
+  saModelMain=model; saModelCopy=modelCopy; saModelCopy2=modelCopy2;
+  setCopyModel(resolveSeq(1)); setFarCopyModel(resolveSeq(2));
 
-  // 初期状態のセグメント設定
-  setCopyModel(resolveSeq(1));
-  setFarCopyModel(resolveSeq(2));
-
-  const _spx = model.position.x, _spy = model.position.y, _spz = model.position.z;
-  loadSpecialModel('ty02.glb', _spx, _spy, _spz).then(r => {
-    if (r) { model02 = r.main; model02Copy = r.copy; model02Copy2 = r.copy2;
-      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
-      console.log('[ty02] loaded'); }
-  });
-  loadSpecialModel('ty03.glb', _spx, _spy, _spz).then(r => {
-    if (r) { model03 = r.main; model03Copy = r.copy; model03Copy2 = r.copy2;
-      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
-      console.log('[ty03] loaded'); }
-  });
-  loadSpecialModel('ty04.glb', _spx, _spy, _spz).then(r => {
-    if (r) { model04 = r.main; model04Copy = r.copy; model04Copy2 = r.copy2;
-      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
-      console.log('[ty04] loaded'); }
-  });
-  loadSpecialModel('ty05.glb', _spx, _spy, _spz).then(r => {
-    if (r) { model05 = r.main; model05Copy = r.copy; model05Copy2 = r.copy2;
-      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
-      console.log('[ty05] loaded'); }
-  });
-  loadSpecialModel('ty06.glb', _spx, _spy, _spz).then(r => {
-    if (r) { model06 = r.main; model06Copy = r.copy; model06Copy2 = r.copy2;
-      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
-      console.log('[ty06] loaded'); }
-  });
-  loadSpecialModel('ty07.glb', _spx, _spy, _spz).then(r => {
-    if (r) { model07 = r.main; model07Copy = r.copy; model07Copy2 = r.copy2;
-      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
-      console.log('[ty07] loaded'); }
+  const _spx=model.position.x,_spy=model.position.y,_spz=model.position.z;
+  ['ty02','ty03','ty04','ty05','ty06','ty07'].forEach((name,i) => {
+    loadSpecialModel(name+'.glb',_spx,_spy,_spz).then(r => {
+      if (!r) return;
+      if (name==='ty02'){model02=r.main;model02Copy=r.copy;model02Copy2=r.copy2;}
+      else if(name==='ty03'){model03=r.main;model03Copy=r.copy;model03Copy2=r.copy2;}
+      else if(name==='ty04'){model04=r.main;model04Copy=r.copy;model04Copy2=r.copy2;}
+      else if(name==='ty05'){model05=r.main;model05Copy=r.copy;model05Copy2=r.copy2;}
+      else if(name==='ty06'){model06=r.main;model06Copy=r.copy;model06Copy2=r.copy2;}
+      else if(name==='ty07'){model07=r.main;model07Copy=r.copy;model07Copy2=r.copy2;}
+      setCopyModel(resolveSeq(loopCount+1)); setFarCopyModel(resolveSeq(loopCount+2));
+    });
   });
 
-  ['car01', 'car02', 'car03', 'car04'].forEach(name => {
-    new GLTFLoader().load(name + '.glb?v=' + Date.now(), gltf => {
-      const m = gltf.scene;
-      m.traverse(c => { if (c.isMesh) c.frustumCulled = false; });
-      m.scale.set(0.4, 0.4, 0.4);
-      m.visible = false;
-      scene.add(m);
-      if      (name === 'car01') car01Model = m;
-      else if (name === 'car02') car02Model = m;
-      else if (name === 'car03') car03Model = m;
-      else                       car04Model = m;
-      console.log('[' + name + '] loaded');
-    }, null, err => console.error('[' + name + '] load error', err));
+  ['car01','car02','car03','car04'].forEach(name => {
+    new GLTFLoader().load(name+'.glb?v='+Date.now(), gltf => {
+      const m=gltf.scene;
+      m.traverse(c=>{if(c.isMesh)c.frustumCulled=false;});
+      m.scale.set(0.4,0.4,0.4); m.visible=false; scene.add(m);
+      if(name==='car01')car01Model=m; else if(name==='car02')car02Model=m;
+      else if(name==='car03')car03Model=m; else car04Model=m;
+    }, null, err=>console.error('['+name+'] load error',err));
   });
 
   EYE_HEIGHT = 0.25;
   camera.position.set(3.5, 0.4, -5);
-  yaw = 0; cameraRoll = 0; pitchGForce = 0;
+  yaw=0; cameraRoll=0; pitchGForce=0;
   camera.rotation.set(pitch, yaw, 0);
 
-  const box2 = new THREE.Box3().setFromObject(model);
-  const c2   = box2.getCenter(new THREE.Vector3());
-  console.log('モデル:', {
-    w: (box2.max.x - box2.min.x).toFixed(2),
-    h: (box2.max.y - box2.min.y).toFixed(2),
-    d: (box2.max.z - box2.min.z).toFixed(2),
-    center: { x: c2.x.toFixed(2), y: c2.y.toFixed(2), z: c2.z.toFixed(2) }
-  });
+  loadingScreen.style.display = 'none';
+  startOverlay.style.display  = 'flex';
+  audioLoadMsg.textContent    = '準備完了';
+  document.getElementById('start-btn').disabled = false;
 
-  loading.style.display = 'none';
+  resizeRenderer();
 
 }, xhr => {
-  if (xhr.total) pfill.style.width = (xhr.loaded / xhr.total * 100) + '%';
+  if (xhr.total) loadProgressEl.textContent = Math.round(xhr.loaded/xhr.total*100) + '%';
 }, err => {
   console.error(err);
-  loading.querySelector('div').textContent = '読み込みエラー';
+  loadingScreen.querySelector('div').textContent = '読み込みエラー';
 });
 
-// ── オーバーレイ ──────────────────────────────────────────────────────────
-const overlay  = document.getElementById('overlay');
-const startBtn = document.getElementById('start-btn');
-
-document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('mousedown', e => {
-  if (e.button === 2 && locked) document.exitPointerLock();
-});
-
-// 音量スライダー
+// ── UI 要素取得
 const engineVolSlider = document.getElementById('engine-vol');
 const engineVolLbl    = document.getElementById('engine-vol-lbl');
+const ytVolSlider     = document.getElementById('yt-vol');
+const ytVolLbl        = document.getElementById('yt-vol-lbl');
+const speedSlider     = document.getElementById('speed-slider');
+const hudSpeedEl      = document.getElementById('hud-speed');
+const hudCoordsEl     = document.getElementById('hud-coords');
+const hudAutoEl       = document.getElementById('hud-auto');
+
 engineVolSlider.addEventListener('input', () => {
   if (masterGain) masterGain.gain.value = engineVolSlider.value / 100;
   engineVolLbl.textContent = engineVolSlider.value + '%';
 });
-
-const ytVolSlider = document.getElementById('yt-vol');
-const ytVolLbl    = document.getElementById('yt-vol-lbl');
 ytVolSlider.addEventListener('input', () => {
   const v = parseInt(ytVolSlider.value);
-  if (ytPlayer) ytPlayer.setVolume(Math.min(100, Math.max(0, Math.round(v * currentVolAdj))));
-  radioAudio.volume = Math.min(1, Math.max(0, v / 100 * currentVolAdj));
+  if (ytPlayer) ytPlayer.setVolume(Math.min(100,Math.max(0,Math.round(v*currentVolAdj))));
+  radioAudio.volume = Math.min(1,Math.max(0,v/100*currentVolAdj));
   ytVolLbl.textContent = v + '%';
 });
 
-// ── 空・地平線スライダー ──────────────────────────────────────────────────
-{
-  const sH = document.getElementById('sky-hue');
-  const sL = document.getElementById('sky-lgt');
-  const hH = document.getElementById('hor-hue');
-  const hL = document.getElementById('hor-lgt');
-  sH.addEventListener('input', () => {
-    skyH = parseInt(sH.value) / 360;
-    document.getElementById('sky-hue-lbl').textContent = sH.value + '°';
-    rebuildSkyColors();
-  });
-  sL.addEventListener('input', () => {
-    skyL = parseInt(sL.value) / 100;
-    document.getElementById('sky-lgt-lbl').textContent = sL.value + '%';
-    rebuildSkyColors();
-  });
-  hH.addEventListener('input', () => {
-    horizH = parseInt(hH.value) / 360;
-    document.getElementById('hor-hue-lbl').textContent = hH.value + '°';
-    rebuildSkyColors();
-  });
-  hL.addEventListener('input', () => {
-    horizL = parseInt(hL.value) / 100;
-    document.getElementById('hor-lgt-lbl').textContent = hL.value + '%';
-    rebuildSkyColors();
-  });
-  document.getElementById('rain-cb').addEventListener('change', e => { rainActive = e.target.checked; });
-  document.getElementById('star-cb').addEventListener('change', e => { starActive = e.target.checked; });
-}
-
-// ページ読み込み時点でYouTube準備を開始（ユーザー操作不要）
-loadPlaylist().then(() => initYTPlayer()).catch(console.error);
-
-startBtn.addEventListener('click', () => {
-  autoDrive = document.getElementById('auto-drive').checked;
-  overlay.classList.add('hidden');
-  document.body.requestPointerLock();
-  initAudio().catch(console.error);
-  gameStartTime = performance.now();
+// スピードスライダー → cruiseSpeed
+speedSlider.addEventListener('input', () => {
+  cruiseSpeed = (speedSlider.value / 100) * MAX_CRUISE;
 });
 
-// ── 移動ループ ────────────────────────────────────────────────────────────
+// D-pad
+document.getElementById('dpad-up').addEventListener('click',    () => selectTrack(-1));
+document.getElementById('dpad-down').addEventListener('click',  () => selectTrack(+1));
+document.getElementById('dpad-left').addEventListener('click',  () => seekYT(-10));
+document.getElementById('dpad-right').addEventListener('click', () => seekYT(+10));
+document.getElementById('dpad-center').addEventListener('click',() => confirmTrack());
+
+// アクションボタン
+const btnPlay  = document.getElementById('btn-play');
+const btnHud   = document.getElementById('btn-hud');
+const lblHud   = document.getElementById('lbl-hud');
+const btnAuto  = document.getElementById('btn-auto');
+const btnSound = document.getElementById('btn-sound');
+const btnFs    = document.getElementById('btn-fs');
+const hudEl    = document.getElementById('hud');
+const soundPanel = document.getElementById('sound-panel');
+
+let hudMode = 0; // 0=表示 1=非表示
+btnPlay.addEventListener('click', () => { if(connectingEl.style.display==='block') confirmTrack(); else toggleYt(); });
+btnHud.addEventListener('click', () => {
+  hudMode = (hudMode + 1) % 2;
+  hudEl.style.display  = hudMode === 0 ? '' : 'none';
+  trackBarEl.style.display = hudMode === 0 ? '' : 'none';
+  lblHud.textContent = hudMode === 0 ? '非表示' : '表示';
+});
+btnAuto.addEventListener('click', () => {
+  autoDrive = !autoDrive;
+  btnAuto.classList.toggle('active', autoDrive);
+  hudAutoEl.style.display = autoDrive ? '' : 'none';
+});
+btnSound.addEventListener('click', () => {
+  const showing = soundPanel.style.display === 'flex';
+  soundPanel.style.display = showing ? 'none' : 'flex';
+});
+btnFs.addEventListener('click', () => {
+  if (!document.body.classList.contains('screen-only')) {
+    document.body.classList.add('screen-only');
+    resizeRenderer();
+  } else if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+});
+document.addEventListener('fullscreenchange', () => { resizeRenderer(); });
+
+// スタート
+document.getElementById('start-btn').addEventListener('click', () => {
+  startOverlay.style.display = 'none';
+  gameStarted  = true;
+  gameStartTime = performance.now();
+  initAudio().catch(console.error);
+  resizeRenderer();
+});
+
+// ページ読み込み時点でYouTube準備
+loadPlaylist().then(() => initYTPlayer()).catch(console.error);
+
+// ── 移動ループ
 const _f = new THREE.Vector3(), _r = new THREE.Vector3();
 let t0 = performance.now();
 
 function updateMovement() {
-  if (!locked) return;
+  if (!gameStarted) return;
   const now = performance.now();
   const dt  = Math.min((now - t0) / 1000, 0.05);
-  frameDt = dt;
-  t0 = now;
+  frameDt = dt; t0 = now;
 
-  const gp = navigator.getGamepads()[0];
-  if (gp) {
-    const rx = Math.abs(gp.axes[2]) > 0.12 ? gp.axes[2] : 0;
-    const ry = Math.abs(gp.axes[3]) > 0.12 ? gp.axes[3] : 0;
-    if (rx || ry) {
-      yaw   -= rx * 0.04;
-      pitch      -= ry * 0.03;
-      pitch       = Math.max(-1.3, Math.min(1.3, pitch));
-      cameraRoll -= rx * 0.015;
-      cameraRoll  = Math.max(-0.18, Math.min(0.18, cameraRoll));
-      camera.rotation.set(pitch + pitchGForce, yaw, cameraRoll);
-    }
-    const dpadUp    = !!gp.buttons[12]?.pressed;
-    const dpadDown  = !!gp.buttons[13]?.pressed;
-    const dpadLeft  = !!gp.buttons[14]?.pressed;
-    const dpadRight = !!gp.buttons[15]?.pressed;
-    if (dpadUp   && !gpDpadUpPrev)   { selectTrack(-1); console.log('[dpad] up btn12'); }
-    if (dpadDown && !gpDpadDownPrev) { selectTrack(+1); console.log('[dpad] down btn13'); }
-    if (dpadLeft  && !gpDpadLeftPrev)  seekYT(-10);
-    if (dpadRight && !gpDpadRightPrev) seekYT(+10);
-    const btnY = !!gp.buttons[3]?.pressed;
-    const btnA = !!gp.buttons[0]?.pressed;
-    const btnB = !!gp.buttons[1]?.pressed;
-    const btnSelect = !!gp.buttons[8]?.pressed;
-    if (btnY && !gpBtnYPrev) {
-      if (connectingEl.style.display === 'block') confirmTrack();
-      else toggleYt();
-    }
-    if (btnA && !gpBtnAPrev) {
-      musicLabelEnabled = !musicLabelEnabled;
-      document.getElementById('coords').style.display = musicLabelEnabled ? 'block' : 'none';
-      if (!musicLabelEnabled) connectingEl.style.display = 'none';
-    }
-    if (btnSelect && !gpSelectPrev && locked) document.exitPointerLock();
-    gpDpadUpPrev    = dpadUp;
-    gpDpadDownPrev  = dpadDown;
-    gpDpadLeftPrev  = dpadLeft;
-    gpDpadRightPrev = dpadRight;
-    gpBtnYPrev      = btnY;
-    gpBtnAPrev      = btnA;
-    gpBtnBPrev      = btnB;
-    gpSelectPrev    = btnSelect;
-  }
-
-  // アクセル・ブレーキ（押しっぱなし）
-  const accel = keys.Space || (gp ? (gp.buttons[7]?.value ?? 0) > 0.1 || !!gp.buttons[7]?.pressed : false);
-  const brake = keys.KeyB  || (gp ? (gp.buttons[6]?.value ?? 0) > 0.1 || !!gp.buttons[6]?.pressed || !!gp.buttons[1]?.pressed : false);
+  const accel = keys.Space;
+  const brake = keys.KeyB;
   if (accel && !brake) {
     cruiseSpeed = Math.min(MAX_CRUISE, cruiseSpeed + ACCEL_RATE * dt);
+    speedSlider.value = Math.round(cruiseSpeed / MAX_CRUISE * 100);
   } else if (brake) {
     cruiseSpeed = Math.max(0, cruiseSpeed - DECEL_RATE * dt);
+    speedSlider.value = Math.round(cruiseSpeed / MAX_CRUISE * 100);
   }
   updateCruiseBgm();
 
-  let mz = 0;
-  let mx = 0;
-  if (gp) {
-    if (Math.abs(gp.axes[0]) > 0.12) mx += gp.axes[0];
-    if (Math.abs(gp.axes[1]) > 0.12) mz += gp.axes[1];
-  }
-
-  const running = keys.ShiftLeft || keys.ShiftRight;
-  const spd = running ? RUN_SPEED : WALK_SPEED;
-
   _f.set(0,0,-1).applyQuaternion(camera.quaternion); _f.y=0; _f.normalize();
-  _r.set(1,0, 0).applyQuaternion(camera.quaternion); _r.y=0; _r.normalize();
-
-  // アクセル自動前進
   if (cruiseSpeed > 0) {
     if (autoDrive) {
-      // 自動運転：視点に関係なく常に直進（-Z方向）
       camera.position.z -= cruiseSpeed * dt;
     } else {
       camera.position.x += _f.x * cruiseSpeed * dt;
       camera.position.z += _f.z * cruiseSpeed * dt;
     }
   }
+  if (autoDrive) camera.position.x += (3.6 - camera.position.x) * Math.min(1, dt * 2.0);
 
-  // WASD追加移動
-  if (mx || mz) {
-    camera.position.x += (_f.x*(-mz) + _r.x*mx) * spd * dt;
-    camera.position.z += (_f.z*(-mz) + _r.z*mx) * spd * dt;
-  }
-
-  // 自動運転：X=3.6（中央）へ緩やかに補正
-  if (autoDrive) {
-    camera.position.x += (3.6 - camera.position.x) * Math.min(1, dt * 2.0);
-  }
-
-  // X方向は壁で制限、Z方向はループ
-  camera.position.x = Math.max(PLAY_X_MIN + PLAYER_R, Math.min(PLAY_X_MAX - PLAYER_R, camera.position.x));
+  camera.position.x = Math.max(PLAY_X_MIN+PLAYER_R, Math.min(PLAY_X_MAX-PLAYER_R, camera.position.x));
   if (camera.position.z <= swapTriggerZ) {
-    swapModels();
-    handleLoopTransition();
-    swapTriggerZ -= LOOP_LENGTH;
+    swapModels(); handleLoopTransition(); swapTriggerZ -= LOOP_LENGTH;
   }
 
-  // Gフォース（加速→上、減速→下）
   const gTarget = (accel && !brake) ? PITCH_ACCEL_MAX : (brake ? PITCH_BRAKE_MAX : 0);
   pitchGForce  += (gTarget - pitchGForce) * Math.min(3.5 * dt, 1);
   camera.rotation.x = pitch + pitchGForce;
-
-  // カメラロール（マウス横移動による荷重感）
-  cameraRoll  = Math.max(-0.18, Math.min(0.18, cameraRoll));
+  cameraRoll = Math.max(-0.18, Math.min(0.18, cameraRoll));
   cameraRoll *= Math.pow(0.04, dt);
   camera.rotation.z = cameraRoll;
 
+  // HUD 更新
+  const kmh = Math.round(cruiseSpeed / MAX_CRUISE * 180);
+  hudSpeedEl.textContent   = kmh;
+  hudCoordsEl.textContent  = `X:${camera.position.x.toFixed(1)}  Z:${camera.position.z.toFixed(1)}`;
 }
 
-// ── 遠景山並み（3重シリンダー）────────────────────────────────────────────
+// ── 遠景山並み
 function buildMountainRings() {
-  function makeMtnTex(seed, color, rangeScale = 1.0) {
-    const W = 2048, H = 512;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
-    ctx.clearRect(0, 0, W, H);
-    const profile = new Float32Array(W + 1);
-    for (let x = 0; x <= W; x++) {
-      const t = x / W * Math.PI * 2;
-      let h = 0;
-      h += 0.30 * Math.sin(t * 3  + seed);
-      h += 0.20 * Math.sin(t * 7  + seed * 1.3);
-      h += 0.10 * Math.sin(t * 13 + seed * 0.7);
-      h += 0.05 * Math.sin(t * 23 + seed * 2.1);
-      h += 0.03 * Math.sin(t * 41 + seed * 1.7);
-      profile[x] = h;
+  function makeMtnTex(seed, color, rangeScale=1.0) {
+    const W=2048,H=512; const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H);
+    const profile=new Float32Array(W+1);
+    for (let x=0;x<=W;x++) {
+      const t=x/W*Math.PI*2; let h=0;
+      h+=.30*Math.sin(t*3+seed); h+=.20*Math.sin(t*7+seed*1.3);
+      h+=.10*Math.sin(t*13+seed*.7); h+=.05*Math.sin(t*23+seed*2.1);
+      h+=.03*Math.sin(t*41+seed*1.7); profile[x]=h;
     }
-    const mn = Math.min(...profile), mx = Math.max(...profile);
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for (let x = 0; x <= W; x++) {
-      const n = (profile[x] - mn) / (mx - mn);
-      ctx.lineTo(x, H * (0.60 + (1 - n) * 0.38 * rangeScale));
-    }
-    ctx.lineTo(W, H);
-    ctx.closePath();
-    ctx.fill();
+    const mn=Math.min(...profile),mx=Math.max(...profile);
+    ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(0,H);
+    for (let x=0;x<=W;x++) { const n=(profile[x]-mn)/(mx-mn); ctx.lineTo(x,H*(.60+(1-n)*.38*rangeScale)); }
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
     return new THREE.CanvasTexture(cv);
   }
-
-  const layers = [
-    { r: 150, h: 90,  cy: 15, color: '#8a7860', seed: 1.2, rs: 37/90  },
-    { r: 260, h: 95,  cy: 17, color: '#7a7890', seed: 2.7, rs: 43/95  },
-    { r: 400, h: 100, cy: 20, color: '#9898b0', seed: 4.1, rs: 53/100 },
-  ];
-
-  const rings = [];
-  for (const L of layers) {
-    const mat = new THREE.MeshBasicMaterial({
-      map: makeMtnTex(L.seed, L.color, L.rs),
-      side: THREE.BackSide,
-      transparent: true,
-      alphaTest: 0.05,
-      depthWrite: false,
-    });
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(L.r, L.r, L.h, 64, 1, true),
-      mat
-    );
-    mesh.position.y = L.cy;
-    mesh.frustumCulled = false;
-    scene.add(mesh);
-    rings.push(mesh);
-  }
-  return rings;
+  const layers=[{r:150,h:90,cy:15,color:'#8a7860',seed:1.2,rs:37/90},{r:260,h:95,cy:17,color:'#7a7890',seed:2.7,rs:43/95},{r:400,h:100,cy:20,color:'#9898b0',seed:4.1,rs:53/100}];
+  return layers.map(L => {
+    const mat=new THREE.MeshBasicMaterial({map:makeMtnTex(L.seed,L.color,L.rs),side:THREE.BackSide,transparent:true,alphaTest:.05,depthWrite:false});
+    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(L.r,L.r,L.h,64,1,true),mat);
+    mesh.position.y=L.cy; mesh.frustumCulled=false; scene.add(mesh); return mesh;
+  });
 }
 const mountainRings = buildMountainRings();
 
-// ── レンダーループ ────────────────────────────────────────────────────────
+// ── レンダーループ
 function animate() {
   requestAnimationFrame(animate);
   updateMovement();
-  for (const ring of mountainRings) {
-    ring.position.x = camera.position.x;
-    ring.position.z = camera.position.z;
-  }
-  // 空色キー調整（60ms間隔）
+  for (const ring of mountainRings) { ring.position.x=camera.position.x; ring.position.z=camera.position.z; }
   const colorNow = performance.now();
   if (colorNow - lastColorT > 60) {
-    lastColorT = colorNow;
-    let colorChanged = false;
-    if (keys.KeyW) { skyH = (skyH + 0.005) % 1;             colorChanged = true; }
-    if (keys.KeyE) { skyH = (skyH - 0.005 + 1) % 1;         colorChanged = true; }
-    if (keys.KeyR) { skyL = Math.max(0.02, skyL - 0.02);    colorChanged = true; }
-    if (keys.KeyT) { skyL = Math.min(0.98, skyL + 0.02);    colorChanged = true; }
-    if (keys.KeyS) { horizH = (horizH + 0.005) % 1;         colorChanged = true; }
-    if (keys.KeyD) { horizH = (horizH - 0.005 + 1) % 1;     colorChanged = true; }
-    if (keys.KeyF) { horizL = Math.max(0.02, horizL - 0.02); colorChanged = true; }
-    if (keys.KeyG) { horizL = Math.min(0.98, horizL + 0.02); colorChanged = true; }
-    if (colorChanged) rebuildSkyColors();
+    lastColorT = colorNow; let changed = false;
+    if(keys.KeyW){skyH=(skyH+.005)%1;changed=true;} if(keys.KeyE){skyH=(skyH-.005+1)%1;changed=true;}
+    if(keys.KeyR){skyL=Math.max(.02,skyL-.02);changed=true;} if(keys.KeyT){skyL=Math.min(.98,skyL+.02);changed=true;}
+    if(keys.KeyS){horizH=(horizH+.005)%1;changed=true;} if(keys.KeyD){horizH=(horizH-.005+1)%1;changed=true;}
+    if(keys.KeyF){horizL=Math.max(.02,horizL-.02);changed=true;} if(keys.KeyG){horizL=Math.min(.98,horizL+.02);changed=true;}
+    if(changed) rebuildSkyColors();
   }
-
-  // 空グラデーション遷移
-  const sp = 0.025;
-  skyUniforms.topColor.value.lerp(skyTopTarget, sp);
-  skyUniforms.horizonColor.value.lerp(skyHorizTarget, sp);
-  skyUniforms.horizonBandColor.value.lerp(skyHorizBandTarget, sp);
-  scene.fog.color.lerp(skyTopTarget, sp);
-  _ambientTarget.lerpColors(_ambientWhite, skyHorizTarget, 0.75);
-  ambientLight.color.lerp(_ambientTarget, sp);
+  const sp=0.025;
+  skyUniforms.topColor.value.lerp(skyTopTarget,sp);
+  skyUniforms.horizonColor.value.lerp(skyHorizTarget,sp);
+  skyUniforms.horizonBandColor.value.lerp(skyHorizBandTarget,sp);
+  scene.fog.color.lerp(skyTopTarget,sp);
+  _ambientTarget.lerpColors(_ambientWhite,skyHorizTarget,.75);
+  ambientLight.color.lerp(_ambientTarget,sp);
   skyMesh.position.copy(camera.position);
-  window._updateRain();
-  window._updateStars();
+  window._updateRain(); window._updateStars();
   checkSpecialSchedule();
-  document.getElementById('coords').textContent =
-    `X:${camera.position.x.toFixed(1)}  Z:${camera.position.z.toFixed(1)}  ${Math.round(cruiseSpeed / MAX_CRUISE * 180)} km/h`;
   renderer.render(scene, camera);
 }
 animate();
 
-window.addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+window.addEventListener('resize', resizeRenderer);
 
-// ── ラジオプレイヤー ──────────────────────────────────────────────────────
+// ── ラジオ
 const radioAudio = new Audio();
-let radioHls     = null;
-let radioActive  = false;
-
+let radioHls = null, radioActive = false;
 function playRadio(url) {
-  if (radioHls) { radioHls.destroy(); radioHls = null; }
+  if (radioHls) { radioHls.destroy(); radioHls=null; }
   radioAudio.pause();
-  radioAudio.volume = Math.min(1, parseInt(ytVolSlider.value) / 100 * currentVolAdj);
-  if (typeof Hls !== 'undefined' && Hls.isSupported() && /\.m3u8/i.test(url)) {
-    radioHls = new Hls();
-    radioHls.loadSource(url);
-    radioHls.attachMedia(radioAudio);
-    radioHls.on(Hls.Events.MANIFEST_PARSED, () => radioAudio.play().catch(console.error));
-  } else {
-    radioAudio.src = url;
-    radioAudio.play().catch(console.error);
-  }
-  radioActive = true;
+  radioAudio.volume = Math.min(1,parseInt(ytVolSlider.value)/100*currentVolAdj);
+  if (typeof Hls!=='undefined' && Hls.isSupported() && /\.m3u8/i.test(url)) {
+    radioHls=new Hls(); radioHls.loadSource(url); radioHls.attachMedia(radioAudio);
+    radioHls.on(Hls.Events.MANIFEST_PARSED,()=>radioAudio.play().catch(console.error));
+  } else { radioAudio.src=url; radioAudio.play().catch(console.error); }
+  radioActive=true;
 }
-
 function stopRadio() {
-  if (radioHls) { radioHls.destroy(); radioHls = null; }
-  radioAudio.pause();
-  radioAudio.src = '';
-  radioActive = false;
+  if (radioHls) { radioHls.destroy(); radioHls=null; }
+  radioAudio.pause(); radioAudio.src=''; radioActive=false;
 }
-
-radioAudio.addEventListener('playing', () => {
-  connectingEl.style.display = 'none';
-});
+radioAudio.addEventListener('playing', () => { connectingEl.style.display='none'; });
 </script>
 </body>
 </html>
