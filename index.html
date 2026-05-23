@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Driving in Tokyo</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #000; }
+
+  #loading {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #111; z-index: 20; color: #ccc; font-family: sans-serif;
+  }
+  #pbar { width: 200px; height: 3px; background: #333; margin-top: 12px; }
+  #pfill { height: 100%; width: 0%; background: #aaa; }
+
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.7); z-index: 10; color: #fff; font-family: sans-serif;
+  }
+  #overlay.hidden { display: none; }
+  #overlay h1 { font-size: 2rem; margin-bottom: 0.5em; }
+  #overlay p { color: #aaa; font-size: 0.9rem; margin: 0.2em 0; }
+  .vol-section { margin-top: 1.2em; width: 280px; }
+  .vol-section h2 { font-size: 0.8rem; color: #888; margin: 0 0 0.5em; letter-spacing: 0.05em; }
+  .vol-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.5em; }
+  .vol-row label { color: #bbb; font-size: 0.82rem; width: 90px; text-align: right; white-space: nowrap; }
+  .vol-row input[type=range] { flex: 1; accent-color: #aaa; cursor: pointer; }
+  .vol-row span { color: #ccc; font-size: 0.82rem; min-width: 3em; }
+  #now-playing { margin-top: 0.6em; font-size: 0.75rem; color: #888; min-height: 1.2em; }
+  #start-btn {
+    margin-top: 1.2em; padding: 0.6em 2em;
+    background: #555; color: #fff; border: none;
+    border-radius: 4px; font-size: 1rem; cursor: pointer;
+  }
+  #start-btn:hover { background: #777; }
+
+  #crosshair {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px; height: 16px;
+    pointer-events: none; z-index: 5; display: none;
+  }
+  #crosshair.show { display: block; }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: rgba(255,255,255,0.8);
+  }
+  #crosshair::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
+  #crosshair::after  { width: 1px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
+
+#connecting {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-family: sans-serif; font-size: 0.85rem;
+    pointer-events: none; z-index: 5; display: none;
+    white-space: nowrap;
+  }
+#coords {
+    position: fixed; top: 10px; left: 10px;
+    color: #fff; font-family: monospace; font-size: 0.8rem;
+    pointer-events: none; z-index: 5;
+    text-shadow: 0 0 4px #000;
+  }
+  .controls { margin: 0.8em 0; }
+  .ctrl-row {
+    display: flex; align-items: baseline;
+    margin-bottom: 0.22em;
+    font-size: 0.84rem; font-family: monospace; color: #ccc;
+  }
+  .ctrl-key  { display: inline-block; min-width: 4.2em; color: #e0e0e0; }
+  .ctrl-key::after { content: '/'; }
+  .ctrl-sep  { display: none; }
+  .ctrl-desc { color: #aaa; margin-left: 0.3em; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div>ロード中...</div>
+  <div id="pbar"><div id="pfill"></div></div>
+</div>
+
+<div id="overlay">
+  <h1>Driving in Tokyo</h1>
+  <div class="controls">
+    <div class="ctrl-row"><span class="ctrl-key">マウス</span><span class="ctrl-sep">/</span><span class="ctrl-desc">視点移動、進行方向</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">Space</span><span class="ctrl-sep">/</span><span class="ctrl-desc">アクセル（離すと速度維持）</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">B</span><span class="ctrl-sep">/</span><span class="ctrl-desc">減速（離すと速度維持）</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">W / E</span><span class="ctrl-sep">/</span><span class="ctrl-desc">空の色相</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">R / T</span><span class="ctrl-sep">/</span><span class="ctrl-desc">空の明暗</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">S / D</span><span class="ctrl-sep">/</span><span class="ctrl-desc">地平線の色相</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">F / G</span><span class="ctrl-sep">/</span><span class="ctrl-desc">地平線の明暗</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">H</span><span class="ctrl-sep">/</span><span class="ctrl-desc">星のON/OFF</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">J</span><span class="ctrl-sep">/</span><span class="ctrl-desc">雨のON/OFF</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">↑↓</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music、選択</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">←→</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music、巻き戻し・早送り</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">Y</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music、再生・停止</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">A</span><span class="ctrl-sep">/</span><span class="ctrl-desc">Music表記、表示・非表示</span></div>
+    <div class="ctrl-row"><span class="ctrl-key">ESC</span><span class="ctrl-sep">/</span><span class="ctrl-desc">ゲーム中断、タイトル・操作説明画面</span></div>
+  </div>
+
+  <div class="vol-section">
+    <h2>── 音量設定 ──</h2>
+    <div class="vol-row">
+      <label>エンジン音</label>
+      <input type="range" id="engine-vol" min="0" max="100" value="70">
+      <span id="engine-vol-lbl">70%</span>
+    </div>
+    <div class="vol-row">
+      <label>music音</label>
+      <input type="range" id="yt-vol" min="0" max="100" value="70">
+      <span id="yt-vol-lbl">70%</span>
+    </div>
+    <div id="now-playing"></div>
+  </div>
+
+  <div style="margin:0.8em 0 0.4em; font-size:0.95rem;">
+    <label style="cursor:pointer; user-select:none;">
+      <input type="checkbox" id="auto-drive" style="margin-right:0.4em; width:1em; height:1em; vertical-align:middle;">
+      自動運転
+    </label>
+  </div>
+  <button id="start-btn">DRIVE START</button>
+</div>
+
+<!-- YouTube プレイヤー（画面外） -->
+<div style="position:fixed;top:-400px;left:-400px;width:400px;height:300px;pointer-events:none">
+  <div id="yt-container"></div>
+</div>
+
+<div id="crosshair"></div>
+<div id="connecting">接続中・・・</div>
+<div id="coords"></div>
+
+<!-- hls.js (ラジオストリーム用) -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ── 基本設定 ──────────────────────────────────────────────────────────────
+let EYE_HEIGHT = 1.5;
+const WALK_SPEED = 5;
+const RUN_SPEED  = 15;
+const MAX_STEP   = 0.6;
+const PLAYER_R   = 0.3;
+
+const PLAY_X_MIN = 0.5, PLAY_X_MAX = 6.7;
+const PLAY_Z_MIN = -233,  PLAY_Z_MAX = 1;
+
+const MAX_CRUISE = 33;
+const ACCEL_RATE = 5;
+const DECEL_RATE = 10;
+let cruiseSpeed  = 0;
+let autoDrive    = false;
+
+// ── 特殊モデル制御 ─────────────────────────────────────────────────────────
+let saModelMain = null, saModelCopy = null, saModelCopy2 = null;
+let model02 = null, model02Copy = null, model02Copy2 = null;
+let model03 = null, model03Copy = null, model03Copy2 = null;
+let model04 = null, model04Copy = null, model04Copy2 = null;
+let model05 = null, model05Copy = null, model05Copy2 = null;
+let model06 = null, model06Copy = null, model06Copy2 = null;
+let model07 = null, model07Copy = null, model07Copy2 = null;
+let gameStartTime = null;
+
+let car01Model = null, car02Model = null, car03Model = null, car04Model = null;
+const CAR_SCHEDULE = [
+  { t:   60, model: 'car01', kmh:  70, dur: 180 },
+  { t:  180, model: 'car02', kmh:  90, dur: 180 },
+  { t:  360, model: 'car03', kmh: 100, dur: 180 },
+  { t:  540, model: 'car04', kmh:  80, dur: 180 },
+  { t:  720, model: 'car03', kmh: 120, dur: 180 },
+  { t:  960, model: 'car02', kmh: 110, dur: 180 },
+  { t: 1140, model: 'car01', kmh:  80, dur: 180 },
+  { t: 1320, model: 'car02', kmh:  80, dur:  60 },
+  { t: 1380, model: 'car04', kmh:  90, dur:  60 },
+  { t: 1440, model: 'car01', kmh:  70, dur: 180 },
+  { t: 1560, model: 'car01', kmh:  70, dur: 120 },
+];
+const SCHEDULE_LOOP = 1800;
+let firedEntries    = new Set();
+let scheduleLoopCount = 0;
+const activeCarMap  = new Map();
+let frameDt = 0;
+let loopCount = 0;
+let swapTriggerZ = -233;
+const _ambientWhite  = new THREE.Color(1, 1, 1);
+const _ambientTarget = new THREE.Color();
+const LOOP_SEQUENCE = [
+  // row1: 01 01 02 01 01 01 03 02 01 03 04 05 01 05 05 01 01 02 03 03 02 01 01 01 01 06 01 01 01 03 07
+  'ty01','ty01','ty02','ty01','ty01','ty01','ty03','ty02','ty01','ty03','ty04','ty05','ty01','ty05','ty05','ty01','ty01','ty02','ty03','ty03','ty02','ty01','ty01','ty01','ty01','ty06','ty01','ty01','ty01','ty03','ty07',
+  // row2: 01 01 01 01 02 01 01 03 01 01 04 05 01 01 05 01 01 06 06 05 01 01 01 01 07 01 01 01 01 03 03
+  'ty01','ty01','ty01','ty01','ty02','ty01','ty01','ty03','ty01','ty01','ty04','ty05','ty01','ty01','ty05','ty01','ty01','ty06','ty06','ty05','ty01','ty01','ty01','ty01','ty07','ty01','ty01','ty01','ty01','ty03','ty03',
+];
+
+// ── レンダラー ────────────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+// ── シーン ────────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = null;
+scene.fog = new THREE.FogExp2(0x030305, 0.007);
+
+// ── 空グラデーションシェーダー ────────────────────────────────────────────
+const skyUniforms = {
+  topColor:         { value: new THREE.Color(0x4a6fa0) },
+  horizonColor:     { value: new THREE.Color(0xc8daf0) },
+  horizonBandColor: { value: new THREE.Color(0xc8daf0) },
+};
+const skyMat = new THREE.ShaderMaterial({
+  uniforms: skyUniforms,
+  vertexShader: `
+    varying vec3 vPos;
+    void main(){ vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+  `,
+  fragmentShader: `
+    uniform vec3 topColor;
+    uniform vec3 horizonColor;
+    uniform vec3 horizonBandColor;
+    varying vec3 vPos;
+    void main(){
+      float h = clamp(normalize(vPos).y, 0.0, 1.0);
+      float bandBlend = smoothstep(0.0, 0.11, h);
+      vec3 lower = mix(horizonBandColor, horizonColor, bandBlend);
+      gl_FragColor = vec4(mix(lower, topColor, pow(h, 0.6)), 1.0);
+    }
+  `,
+  side: THREE.BackSide,
+  depthWrite: false,
+  depthTest: false,
+});
+const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(490, 32, 15), skyMat);
+skyMesh.renderOrder = -1;
+skyMesh.frustumCulled = false;
+scene.add(skyMesh);
+
+let skyTopTarget       = new THREE.Color(0x4a6fa0);
+let skyHorizTarget     = new THREE.Color(0xc8daf0);
+let skyHorizBandTarget = new THREE.Color(0xc8daf0);
+
+// ── 空色調整パラメータ ───────────────────────────────────────────────────
+let skyH = 0.592, skyS = 0.63, skyL = 0.76;
+let horizH = 0.583, horizS = 0.24, horizL = 0.79;
+let lastColorT = 0;
+
+function rebuildSkyColors() {
+  const skyBase = new THREE.Color().setHSL(skyH, skyS, skyL);
+  skyTopTarget.copy(skyBase).multiplyScalar(0.42);
+  skyHorizTarget.setHSL(horizH, horizS, horizL);
+  skyHorizBandTarget.copy(skyHorizTarget);
+}
+
+function setSkyFromColor(hex, solid = false) {
+  const base = new THREE.Color(hex);
+  skyTopTarget.copy(base).multiplyScalar(0.42);
+  if (solid) {
+    skyHorizTarget.copy(skyTopTarget);
+  } else {
+    skyHorizTarget.copy(base).lerp(new THREE.Color(0xddd8c8), 0.52);
+  }
+  skyHorizBandTarget.copy(skyHorizTarget);
+  // HSLパラメータを同期
+  const hsl = {}; base.getHSL(hsl);
+  skyH = hsl.h; skyS = hsl.s; skyL = hsl.l;
+  skyHorizTarget.getHSL(hsl);
+  horizH = hsl.h; horizS = hsl.s; horizL = hsl.l;
+}
+function setSkyHorizBand(hex) {
+  if (hex) skyHorizBandTarget.set(hex);
+  else skyHorizBandTarget.copy(skyHorizTarget);
+}
+setSkyFromColor('#9bbae8');
+
+// ── カメラ ────────────────────────────────────────────────────────────────
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 500);
+camera.rotation.order = 'YXZ';
+
+// ── ライト ────────────────────────────────────────────────────────────────
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambientLight);
+const sun = new THREE.DirectionalLight(0xffffff, 0.5);
+sun.position.set(50, 100, 50);
+scene.add(sun);
+
+// ── YouTube プレイヤー ────────────────────────────────────────────────────
+let ytPlayer       = null;
+let ytReady        = false;
+let currentVolAdj  = 1.0; // 音量補正係数（例: 0.8 / 1.1）
+let gpDpadUpPrev    = false;
+let gpDpadDownPrev  = false;
+let gpDpadLeftPrev  = false;
+let gpDpadRightPrev = false;
+let gpBtnYPrev      = false;
+let gpBtnAPrev      = false;
+let gpBtnBPrev      = false;
+let gpSelectPrev    = false;
+
+// プレイリスト
+let playlist      = [];
+let playlistIdx   = 0;
+let ytSelectTimer = null;
+let musicLabelEnabled = true;
+let isBrowsing        = false;
+
+async function loadPlaylist() {
+  try {
+    const text = await (await fetch('musiclist.txt')).text();
+    const entries = text.split('\n')
+      .map(l => l.trim()).filter(l => l && !l.startsWith('#'))
+      .map(l => {
+        const urlMatch = l.match(/https?:\/\/[^「\s]+/);
+        if (!urlMatch) return { type: 'label', name: l, id: null };
+        const urlPart = urlMatch[0];
+        const rest    = l.slice(urlMatch.index + urlPart.length).trim();
+        const nameMatch = rest.match(/「([^」]*)」/);
+        const name  = nameMatch ? nameMatch[1] : '';
+        const keywords = rest.replace(/「[^」]*」/, '');
+        const colorMatch = keywords.match(/#[0-9a-fA-F]{6}/);
+        const color = colorMatch ? colorMatch[0] : null;
+        const rain  = /雨/.test(keywords);
+        const star  = /星/.test(keywords);
+        const solid = /単色/.test(keywords);
+        const horizMatch = keywords.match(/地平線(#[0-9a-fA-F]{6})/);
+        const horiz = horizMatch ? horizMatch[1] : null;
+        const volMatch = keywords.match(/音量([+-]\d+)%/);
+        const volAdj = volMatch ? 1 + parseInt(volMatch[1]) / 100 : 1.0;
+        const cleanUrl = urlPart.replace(/&amp;/g, '&');
+        const isYT = /youtube\.com|youtu\.be/.test(cleanUrl);
+        const vid  = isYT ? (cleanUrl.match(/[?&]v=([^&]+)/)?.[1] || cleanUrl) : cleanUrl;
+        return { id: vid, type: isYT ? 'yt' : 'radio', name, color, rain, star, solid, horiz, volAdj };
+      });
+    const valid = entries.filter(Boolean);
+    if (valid.length > 0) { playlist = valid; console.log('[playlist]', valid.length, 'tracks'); }
+  } catch(e) { console.warn('[playlist] musiclist.txt 読み込み失敗、デフォルト使用'); }
+}
+
+const nowPlayingEl  = document.getElementById('now-playing');
+const connectingEl  = document.getElementById('connecting');
+
+const decisionSE = new Audio('music/決定ボタンを押す7.mp3');
+
+function trackLabel(entry) {
+  if (!entry.name) return entry.id;
+  const comma = entry.name.indexOf(',');
+  if (comma === -1) return entry.name;
+  return `${entry.name.slice(0, comma).trim()} - ${entry.name.slice(comma + 1).trim()}`;
+}
+
+function selectTrack(delta) {
+  if (playlist.length === 0) return;
+  playlistIdx = ((playlistIdx + delta) % playlist.length + playlist.length) % playlist.length;
+  const entry = playlist[playlistIdx];
+  isBrowsing = entry.type !== 'label';
+  if (musicLabelEnabled) {
+    connectingEl.style.display = 'block';
+    connectingEl.textContent   = entry.type === 'label'
+      ? `── ${entry.name} ──`
+      : trackLabel(entry);
+  }
+}
+
+function confirmTrack() {
+  if (!isBrowsing) return;
+  isBrowsing = false;
+  const entry = playlist[playlistIdx];
+  decisionSE.currentTime = 0;
+  decisionSE.play().catch(() => {});
+  if (musicLabelEnabled) {
+    connectingEl.style.display = 'block';
+    connectingEl.textContent = `${trackLabel(entry)}　接続中・・・`;
+  }
+  if (entry.color) setSkyFromColor(entry.color, !!entry.solid);
+  setSkyHorizBand(entry.horiz);
+  rainActive = !!entry.rain;
+  starActive = !!entry.star;
+  currentVolAdj = entry.volAdj ?? 1.0;
+  if (nowPlayingEl) nowPlayingEl.textContent = `▶  ${trackLabel(entry)}`;
+
+  if (entry.type === 'radio') {
+    if (ytReady && ytPlayer) ytPlayer.stopVideo();
+    playRadio(entry.id);
+  } else {
+    stopRadio();
+    if (!ytReady || !ytPlayer) return;
+    ytPlayer.setVolume(Math.min(100, Math.max(0, Math.round(parseInt(ytVolSlider.value) * currentVolAdj))));
+    ytPlayer.loadVideoById(entry.id);
+  }
+}
+
+function loadYTApi() {
+  return new Promise(resolve => {
+    if (window.YT?.Player) { resolve(); return; }
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (prev) prev(); resolve(); };
+    document.head.appendChild(tag);
+  });
+}
+
+async function initYTPlayer() {
+  try {
+    await loadYTApi();
+    console.log('[YT] API loaded');
+    ytPlayer = await new Promise((resolve, reject) => {
+      new YT.Player('yt-container', {
+        width: 400, height: 300,
+        playerVars: { autoplay: 0, controls: 0, fs: 0 },
+        events: {
+          onReady: e => { ytReady = true; console.log('[YT] player ready'); resolve(e.target); },
+          onStateChange: e => {
+            if (e.data === 1) { connectingEl.style.display = 'none'; isBrowsing = false; }
+            if (e.data === 0) { // 曲終了 → 音量リセット
+              currentVolAdj = 1.0;
+              ytPlayer.setVolume(parseInt(ytVolSlider.value));
+            }
+          },
+          onError: e => { console.error('[YT] error:', e.data); reject(e.data); },
+        }
+      });
+    });
+  } catch(e) {
+    console.error('[YT] init failed:', e);
+  }
+}
+
+function seekYT(sec) {
+  if (!ytReady || !ytPlayer) return;
+  ytPlayer.seekTo(ytPlayer.getCurrentTime() + sec, true);
+}
+
+function toggleYt() {
+  if (radioActive) {
+    radioAudio.paused ? radioAudio.play().catch(console.error) : radioAudio.pause();
+    return;
+  }
+  if (!ytReady || !ytPlayer) return;
+  ytPlayer.getPlayerState() === 1 ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
+}
+
+// ── BGM (Web Audio API ギャップレスループ) ───────────────────────────────
+let audioCtx     = null;
+let masterGain   = null;
+const audioBufs  = {};
+let playingSrc   = null;
+let playingKey   = null;
+
+async function initAudio() {
+  audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.7;
+  masterGain.connect(audioCtx.destination);
+  const urls = {
+    freeway1: 'music/drive_on_freeway1.mp3',
+    freeway2: 'music/drive_on_freeway2.mp3',
+  };
+  await Promise.all(Object.entries(urls).map(async ([k, url]) => {
+    const ab = await (await fetch(url)).arrayBuffer();
+    audioBufs[k] = await audioCtx.decodeAudioData(ab);
+  }));
+}
+
+function playBgm(key) {
+  if (!audioCtx || key === playingKey) return;
+  if (playingSrc) { playingSrc.stop(); playingSrc.disconnect(); playingSrc = null; }
+  playingKey = key;
+  if (!key || !audioBufs[key]) return;
+  const src = audioCtx.createBufferSource();
+  src.buffer = audioBufs[key];
+  src.loop   = true;
+  src.connect(masterGain);
+  src.start(0);
+  playingSrc = src;
+}
+
+function updateCruiseBgm() {
+  playBgm(cruiseSpeed > 14 ? 'freeway2' : 'freeway1');
+}
+
+
+// ── 雨システム ────────────────────────────────────────────────────────────
+let rainActive = false;
+{
+  const CNT = 5000, SPR = 5, TOP = 10, SPD = 0.3, LEN = 0.2;
+  const pos = new Float32Array(CNT * 6);
+  for (let i = 0; i < CNT; i++) {
+    const x = (Math.random() - 0.5) * SPR * 2;
+    const y = Math.random() * TOP;
+    const z = (Math.random() - 0.5) * SPR * 2;
+    const b = i * 6;
+    pos[b]=x; pos[b+1]=y; pos[b+2]=z; pos[b+3]=x; pos[b+4]=y-LEN; pos[b+5]=z;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  var rainSystem = new THREE.LineSegments(geo,
+    new THREE.LineBasicMaterial({ color: 0xaaccff, transparent: true, opacity: 1.0, depthWrite: false }));
+  rainSystem.visible = false;
+  rainSystem.frustumCulled = false;
+  scene.add(rainSystem);
+
+  window._updateRain = function() {
+    rainSystem.visible = rainActive;
+    if (!rainActive) return;
+    const p = rainSystem.geometry.attributes.position.array;
+    for (let i = 0; i < CNT; i++) {
+      const b = i * 6;
+      p[b+1] -= SPD; p[b+4] -= SPD;
+      if (p[b+4] < -1) {
+        const x = (Math.random()-0.5)*SPR*2, z = (Math.random()-0.5)*SPR*2, y = TOP + Math.random()*4;
+        p[b]=x; p[b+1]=y; p[b+2]=z; p[b+3]=x; p[b+4]=y-LEN; p[b+5]=z;
+      }
+    }
+    rainSystem.geometry.attributes.position.needsUpdate = true;
+    rainSystem.position.set(camera.position.x, 0, camera.position.z);
+  };
+}
+
+// ── 星システム ────────────────────────────────────────────────────────────
+let starActive = false;
+{
+  const CNT = 2000, R = 480;
+  const pos = new Float32Array(CNT * 3);
+  for (let i = 0; i < CNT; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.random() * Math.PI * 0.5; // 上半球のみ
+    pos[i*3]   = R * Math.sin(phi) * Math.cos(theta);
+    pos[i*3+1] = R * Math.cos(phi);
+    pos[i*3+2] = R * Math.sin(phi) * Math.sin(theta);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  var starSystem = new THREE.Points(geo,
+    new THREE.PointsMaterial({ color: 0xffffff, size: 1.1, sizeAttenuation: false, depthWrite: false, fog: false }));
+  starSystem.visible = false;
+  starSystem.frustumCulled = false;
+  scene.add(starSystem);
+
+  window._updateStars = function() {
+    starSystem.visible = starActive;
+    if (starActive) starSystem.position.copy(camera.position);
+  };
+}
+
+
+// ── 入力 ─────────────────────────────────────────────────────────────────
+let yaw = 0, pitch = 0.18, cameraRoll = 0, pitchGForce = 0, locked = false;
+const PITCH_ACCEL_MAX =  7.5 * Math.PI / 180;
+const PITCH_BRAKE_MAX = -(8 / 3) * Math.PI / 180;
+const keys      = {};
+const crosshair = document.getElementById('crosshair');
+const dbg       = document.getElementById('debug');
+
+document.addEventListener('pointerlockchange', () => {
+  locked = document.pointerLockElement === document.body;
+  crosshair.classList.toggle('show', locked);
+  if (!locked) overlay.classList.remove('hidden');
+});
+document.addEventListener('mousemove', e => {
+  if (!locked) return;
+  yaw        -= e.movementX * 0.002;
+  pitch      -= e.movementY * 0.002;
+  pitch       = Math.max(-1.3, Math.min(1.3, pitch));
+  cameraRoll -= e.movementX * 0.00025;
+  cameraRoll  = Math.max(-0.18, Math.min(0.18, cameraRoll));
+  camera.rotation.set(pitch + pitchGForce, yaw, cameraRoll);
+});
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Escape' && locked) document.exitPointerLock();
+  if (e.code === 'Space') {
+    e.preventDefault();
+  }
+  if (e.code === 'KeyY' && !e.repeat) {
+    if (connectingEl.style.display === 'block') confirmTrack();
+    else toggleYt();
+  }
+  if (e.code === 'KeyA' && !e.repeat) {
+    musicLabelEnabled = !musicLabelEnabled;
+    document.getElementById('coords').style.display = musicLabelEnabled ? 'block' : 'none';
+    if (!musicLabelEnabled) connectingEl.style.display = 'none';
+  }
+  if (e.code === 'KeyH' && !e.repeat) starActive = !starActive;
+  if (e.code === 'KeyJ' && !e.repeat) rainActive = !rainActive;
+  if (e.code === 'ArrowUp'    && !e.repeat) { selectTrack(-1); e.preventDefault(); }
+  if (e.code === 'ArrowDown'  && !e.repeat) { selectTrack(+1); e.preventDefault(); }
+  if (e.code === 'ArrowLeft'  && !e.repeat) { seekYT(-10); e.preventDefault(); }
+  if (e.code === 'ArrowRight' && !e.repeat) { seekYT(+10); e.preventDefault(); }
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+// ── ループ定数 ────────────────────────────────────────────────────────────
+const LOOP_LENGTH = 234;
+const zoneRocks = new Map();
+
+// ── 特殊モデル ロード・切替 ────────────────────────────────────────────────
+const GLB_DARK = 0.5; // 構築物マテリアル暗化係数
+
+function loadSpecialModel(filename, px, py, pz) {
+  return new Promise(resolve => {
+    new GLTFLoader().load(filename + '?v=' + Date.now(), gltf => {
+      const m = gltf.scene;
+      m.frustumCulled = false;
+      m.traverse(child => {
+        child.frustumCulled = false;
+        if (!child.isMesh) return;
+        const fixMat = mat => {
+          if (!mat) return;
+          if (mat.color && mat.color.r > 0.6 && mat.color.g < 0.35 && mat.color.b > 0.5) {
+            child.visible = false; return;
+          }
+          mat.transparent = false; mat.opacity = 1; mat.depthWrite = true;
+          if (mat.color) mat.color.multiplyScalar(GLB_DARK);
+          mat.needsUpdate = true;
+        };
+        Array.isArray(child.material) ? child.material.forEach(fixMat) : fixMat(child.material);
+      });
+      m.scale.set(0.4, 0.4, 0.4);
+      m.position.set(px, py, pz);
+      m.visible = false;
+      scene.add(m);
+      const mCopy = m.clone();
+      mCopy.position.set(px, py, pz - LOOP_LENGTH);
+      mCopy.visible = false;
+      scene.add(mCopy);
+      const mCopy2 = m.clone();
+      mCopy2.position.set(px, py, pz - 2 * LOOP_LENGTH);
+      mCopy2.visible = false;
+      scene.add(mCopy2);
+      resolve({ main: m, copy: mCopy, copy2: mCopy2 });
+    }, null, err => { console.error('[loadSpecialModel]', filename, err); resolve(null); });
+  });
+}
+
+function setMainModel(key) {
+  if (saModelMain) saModelMain.visible = (key === 'ty01');
+  if (model02)     model02.visible     = (key === 'ty02');
+  if (model03)     model03.visible     = (key === 'ty03');
+  if (model04)     model04.visible     = (key === 'ty04');
+  if (model05)     model05.visible     = (key === 'ty05');
+  if (model06)     model06.visible     = (key === 'ty06');
+  if (model07)     model07.visible     = (key === 'ty07');
+  for (const [rock, zones] of zoneRocks) {
+    rock.visible = !zones.has(key);
+  }
+}
+
+function setCopyModel(key) {
+  if (saModelCopy)  saModelCopy.visible  = (key === 'ty01');
+  if (model02Copy)  model02Copy.visible  = (key === 'ty02');
+  if (model03Copy)  model03Copy.visible  = (key === 'ty03');
+  if (model04Copy)  model04Copy.visible  = (key === 'ty04');
+  if (model05Copy)  model05Copy.visible  = (key === 'ty05');
+  if (model06Copy)  model06Copy.visible  = (key === 'ty06');
+  if (model07Copy)  model07Copy.visible  = (key === 'ty07');
+}
+
+function setFarCopyModel(key) {
+  if (saModelCopy2)  saModelCopy2.visible  = (key === 'ty01');
+  if (model02Copy2)  model02Copy2.visible  = (key === 'ty02');
+  if (model03Copy2)  model03Copy2.visible  = (key === 'ty03');
+  if (model04Copy2)  model04Copy2.visible  = (key === 'ty04');
+  if (model05Copy2)  model05Copy2.visible  = (key === 'ty05');
+  if (model06Copy2)  model06Copy2.visible  = (key === 'ty06');
+  if (model07Copy2)  model07Copy2.visible  = (key === 'ty07');
+}
+
+function resolveSeq(idx) {
+  const key = LOOP_SEQUENCE[((idx % LOOP_SEQUENCE.length) + LOOP_SEQUENCE.length) % LOOP_SEQUENCE.length];
+  if (key === 'ty02' && !model02) return 'ty01';
+  if (key === 'ty03' && !model03) return 'ty01';
+  if (key === 'ty04' && !model04) return 'ty01';
+  if (key === 'ty05' && !model05) return 'ty01';
+  if (key === 'ty06' && !model06) return 'ty01';
+  if (key === 'ty07' && !model07) return 'ty01';
+  return key;
+}
+
+function swapModels() {
+  // copy2 の一つ先へ旧 main を再配置（3スロット循環）
+  const newCopy2Z = saModelCopy2.position.z - LOOP_LENGTH;
+  for (const m of [saModelMain, model02, model03, model04, model05, model06, model07]) {
+    if (m) m.position.z = newCopy2Z;
+  }
+
+  // 3スロット循環: main←copy, copy←copy2, copy2←旧main
+  [saModelMain, saModelCopy, saModelCopy2]   = [saModelCopy, saModelCopy2, saModelMain];
+  [model02, model02Copy, model02Copy2]       = [model02Copy, model02Copy2, model02];
+  [model03, model03Copy, model03Copy2]       = [model03Copy, model03Copy2, model03];
+  [model04, model04Copy, model04Copy2]       = [model04Copy, model04Copy2, model04];
+  [model05, model05Copy, model05Copy2]       = [model05Copy, model05Copy2, model05];
+  [model06, model06Copy, model06Copy2]       = [model06Copy, model06Copy2, model06];
+  [model07, model07Copy, model07Copy2]       = [model07Copy, model07Copy2, model07];
+}
+
+function handleLoopTransition() {
+  loopCount++;
+  const cur  = resolveSeq(loopCount);
+  const next = resolveSeq(loopCount + 1);
+  const far  = resolveSeq(loopCount + 2);
+  setMainModel(cur);
+  setCopyModel(next);
+  setFarCopyModel(far);
+  console.log(`[loop ${loopCount}] main → ${cur}, copy → ${next}, copy2 → ${far}`);
+}
+
+function checkSpecialSchedule() {
+  if (!gameStartTime) return;
+  const elapsed     = (performance.now() - gameStartTime) / 1000;
+  const cycleCount  = Math.floor(elapsed / SCHEDULE_LOOP);
+  const cycleElapsed = elapsed % SCHEDULE_LOOP;
+  const carModels   = { car01: car01Model, car02: car02Model, car03: car03Model, car04: car04Model };
+
+  if (cycleCount > scheduleLoopCount) {
+    scheduleLoopCount = cycleCount;
+    firedEntries.clear();
+    for (const [m] of activeCarMap) m.visible = false;
+    activeCarMap.clear();
+  }
+
+  for (let i = 0; i < CAR_SCHEDULE.length; i++) {
+    if (firedEntries.has(i)) continue;
+    const entry = CAR_SCHEDULE[i];
+    if (cycleElapsed >= entry.t) {
+      const m = carModels[entry.model];
+      if (m) {
+        m.position.set(0, 0, camera.position.z - 20);
+        m.rotation.y = 0;
+        m.visible = true;
+        activeCarMap.set(m, { speed: 27.5 * entry.kmh / 150, endTime: elapsed + entry.dur });
+        console.log('[' + entry.model + '] 登場 ' + entry.kmh + 'km/h');
+      }
+      firedEntries.add(i);
+    }
+  }
+
+  const toRemove = [];
+  for (const [m, ac] of activeCarMap) {
+    if (elapsed > ac.endTime) {
+      m.visible = false;
+      toRemove.push(m);
+    } else {
+      m.position.z -= ac.speed * frameDt;
+    }
+  }
+  for (const m of toRemove) activeCarMap.delete(m);
+}
+
+// ── GLTF ロード ───────────────────────────────────────────────────────────
+const pfill   = document.getElementById('pfill');
+const loading = document.getElementById('loading');
+
+new GLTFLoader().load('ty01.glb?v=' + Date.now(), gltf => {
+  const model = gltf.scene;
+
+  model.frustumCulled = false;
+  model.traverse(child => {
+    child.frustumCulled = false;
+    if (!child.isMesh) return;
+    const fix = m => {
+      if (!m) return;
+      if (m.color && m.color.r > 0.6 && m.color.g < 0.35 && m.color.b > 0.5) {
+        child.visible = false; return;
+      }
+      m.transparent = false; m.opacity = 1; m.depthWrite = true;
+      if (m.color) m.color.multiplyScalar(GLB_DARK);
+      m.needsUpdate = true;
+    };
+    Array.isArray(child.material) ? child.material.forEach(fix) : fix(child.material);
+  });
+
+  model.scale.set(0.4, 0.4, 0.4);
+  model.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(model);
+  const cen = box.getCenter(new THREE.Vector3());
+  model.position.set(0, 0, -cen.z);
+  scene.add(model);
+  model.updateMatrixWorld(true);
+
+
+  // シームレスループ用：コピーを2つ作成（3スロット化で遠景を早期表示）
+  const modelCopy = model.clone();
+  modelCopy.position.set(model.position.x, model.position.y, model.position.z - LOOP_LENGTH);
+  scene.add(modelCopy);
+  const modelCopy2 = model.clone();
+  modelCopy2.position.set(model.position.x, model.position.y, model.position.z - 2 * LOOP_LENGTH);
+  scene.add(modelCopy2);
+
+  saModelMain = model;
+  saModelCopy = modelCopy;
+  saModelCopy2 = modelCopy2;
+
+  // 初期状態のセグメント設定
+  setCopyModel(resolveSeq(1));
+  setFarCopyModel(resolveSeq(2));
+
+  const _spx = model.position.x, _spy = model.position.y, _spz = model.position.z;
+  loadSpecialModel('ty02.glb', _spx, _spy, _spz).then(r => {
+    if (r) { model02 = r.main; model02Copy = r.copy; model02Copy2 = r.copy2;
+      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
+      console.log('[ty02] loaded'); }
+  });
+  loadSpecialModel('ty03.glb', _spx, _spy, _spz).then(r => {
+    if (r) { model03 = r.main; model03Copy = r.copy; model03Copy2 = r.copy2;
+      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
+      console.log('[ty03] loaded'); }
+  });
+  loadSpecialModel('ty04.glb', _spx, _spy, _spz).then(r => {
+    if (r) { model04 = r.main; model04Copy = r.copy; model04Copy2 = r.copy2;
+      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
+      console.log('[ty04] loaded'); }
+  });
+  loadSpecialModel('ty05.glb', _spx, _spy, _spz).then(r => {
+    if (r) { model05 = r.main; model05Copy = r.copy; model05Copy2 = r.copy2;
+      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
+      console.log('[ty05] loaded'); }
+  });
+  loadSpecialModel('ty06.glb', _spx, _spy, _spz).then(r => {
+    if (r) { model06 = r.main; model06Copy = r.copy; model06Copy2 = r.copy2;
+      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
+      console.log('[ty06] loaded'); }
+  });
+  loadSpecialModel('ty07.glb', _spx, _spy, _spz).then(r => {
+    if (r) { model07 = r.main; model07Copy = r.copy; model07Copy2 = r.copy2;
+      setCopyModel(resolveSeq(loopCount + 1)); setFarCopyModel(resolveSeq(loopCount + 2));
+      console.log('[ty07] loaded'); }
+  });
+
+  ['car01', 'car02', 'car03', 'car04'].forEach(name => {
+    new GLTFLoader().load(name + '.glb?v=' + Date.now(), gltf => {
+      const m = gltf.scene;
+      m.traverse(c => { if (c.isMesh) c.frustumCulled = false; });
+      m.scale.set(0.4, 0.4, 0.4);
+      m.visible = false;
+      scene.add(m);
+      if      (name === 'car01') car01Model = m;
+      else if (name === 'car02') car02Model = m;
+      else if (name === 'car03') car03Model = m;
+      else                       car04Model = m;
+      console.log('[' + name + '] loaded');
+    }, null, err => console.error('[' + name + '] load error', err));
+  });
+
+  EYE_HEIGHT = 0.25;
+  camera.position.set(3.5, 0.4, -5);
+  yaw = 0; cameraRoll = 0; pitchGForce = 0;
+  camera.rotation.set(pitch, yaw, 0);
+
+  const box2 = new THREE.Box3().setFromObject(model);
+  const c2   = box2.getCenter(new THREE.Vector3());
+  console.log('モデル:', {
+    w: (box2.max.x - box2.min.x).toFixed(2),
+    h: (box2.max.y - box2.min.y).toFixed(2),
+    d: (box2.max.z - box2.min.z).toFixed(2),
+    center: { x: c2.x.toFixed(2), y: c2.y.toFixed(2), z: c2.z.toFixed(2) }
+  });
+
+  loading.style.display = 'none';
+
+}, xhr => {
+  if (xhr.total) pfill.style.width = (xhr.loaded / xhr.total * 100) + '%';
+}, err => {
+  console.error(err);
+  loading.querySelector('div').textContent = '読み込みエラー';
+});
+
+// ── オーバーレイ ──────────────────────────────────────────────────────────
+const overlay  = document.getElementById('overlay');
+const startBtn = document.getElementById('start-btn');
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('mousedown', e => {
+  if (e.button === 2 && locked) document.exitPointerLock();
+});
+
+// 音量スライダー
+const engineVolSlider = document.getElementById('engine-vol');
+const engineVolLbl    = document.getElementById('engine-vol-lbl');
+engineVolSlider.addEventListener('input', () => {
+  if (masterGain) masterGain.gain.value = engineVolSlider.value / 100;
+  engineVolLbl.textContent = engineVolSlider.value + '%';
+});
+
+const ytVolSlider = document.getElementById('yt-vol');
+const ytVolLbl    = document.getElementById('yt-vol-lbl');
+ytVolSlider.addEventListener('input', () => {
+  const v = parseInt(ytVolSlider.value);
+  if (ytPlayer) ytPlayer.setVolume(Math.min(100, Math.max(0, Math.round(v * currentVolAdj))));
+  radioAudio.volume = Math.min(1, Math.max(0, v / 100 * currentVolAdj));
+  ytVolLbl.textContent = v + '%';
+});
+
+// ページ読み込み時点でYouTube準備を開始（ユーザー操作不要）
+loadPlaylist().then(() => initYTPlayer()).catch(console.error);
+
+startBtn.addEventListener('click', () => {
+  autoDrive = document.getElementById('auto-drive').checked;
+  overlay.classList.add('hidden');
+  document.body.requestPointerLock();
+  initAudio().catch(console.error);
+  gameStartTime = performance.now();
+});
+
+// ── 移動ループ ────────────────────────────────────────────────────────────
+const _f = new THREE.Vector3(), _r = new THREE.Vector3();
+let t0 = performance.now();
+
+function updateMovement() {
+  if (!locked) return;
+  const now = performance.now();
+  const dt  = Math.min((now - t0) / 1000, 0.05);
+  frameDt = dt;
+  t0 = now;
+
+  const gp = navigator.getGamepads()[0];
+  if (gp) {
+    const rx = Math.abs(gp.axes[2]) > 0.12 ? gp.axes[2] : 0;
+    const ry = Math.abs(gp.axes[3]) > 0.12 ? gp.axes[3] : 0;
+    if (rx || ry) {
+      yaw   -= rx * 0.04;
+      pitch      -= ry * 0.03;
+      pitch       = Math.max(-1.3, Math.min(1.3, pitch));
+      cameraRoll -= rx * 0.015;
+      cameraRoll  = Math.max(-0.18, Math.min(0.18, cameraRoll));
+      camera.rotation.set(pitch + pitchGForce, yaw, cameraRoll);
+    }
+    const dpadUp    = !!gp.buttons[12]?.pressed;
+    const dpadDown  = !!gp.buttons[13]?.pressed;
+    const dpadLeft  = !!gp.buttons[14]?.pressed;
+    const dpadRight = !!gp.buttons[15]?.pressed;
+    if (dpadUp   && !gpDpadUpPrev)   { selectTrack(-1); console.log('[dpad] up btn12'); }
+    if (dpadDown && !gpDpadDownPrev) { selectTrack(+1); console.log('[dpad] down btn13'); }
+    if (dpadLeft  && !gpDpadLeftPrev)  seekYT(-10);
+    if (dpadRight && !gpDpadRightPrev) seekYT(+10);
+    const btnY = !!gp.buttons[3]?.pressed;
+    const btnA = !!gp.buttons[0]?.pressed;
+    const btnB = !!gp.buttons[1]?.pressed;
+    const btnSelect = !!gp.buttons[8]?.pressed;
+    if (btnY && !gpBtnYPrev) {
+      if (connectingEl.style.display === 'block') confirmTrack();
+      else toggleYt();
+    }
+    if (btnA && !gpBtnAPrev) {
+      musicLabelEnabled = !musicLabelEnabled;
+      document.getElementById('coords').style.display = musicLabelEnabled ? 'block' : 'none';
+      if (!musicLabelEnabled) connectingEl.style.display = 'none';
+    }
+    if (btnSelect && !gpSelectPrev && locked) document.exitPointerLock();
+    gpDpadUpPrev    = dpadUp;
+    gpDpadDownPrev  = dpadDown;
+    gpDpadLeftPrev  = dpadLeft;
+    gpDpadRightPrev = dpadRight;
+    gpBtnYPrev      = btnY;
+    gpBtnAPrev      = btnA;
+    gpBtnBPrev      = btnB;
+    gpSelectPrev    = btnSelect;
+  }
+
+  // アクセル・ブレーキ（押しっぱなし）
+  const accel = keys.Space || (gp ? (gp.buttons[7]?.value ?? 0) > 0.1 || !!gp.buttons[7]?.pressed : false);
+  const brake = keys.KeyB  || (gp ? (gp.buttons[6]?.value ?? 0) > 0.1 || !!gp.buttons[6]?.pressed || !!gp.buttons[1]?.pressed : false);
+  if (accel && !brake) {
+    cruiseSpeed = Math.min(MAX_CRUISE, cruiseSpeed + ACCEL_RATE * dt);
+  } else if (brake) {
+    cruiseSpeed = Math.max(0, cruiseSpeed - DECEL_RATE * dt);
+  }
+  updateCruiseBgm();
+
+  let mz = 0;
+  let mx = 0;
+  if (gp) {
+    if (Math.abs(gp.axes[0]) > 0.12) mx += gp.axes[0];
+    if (Math.abs(gp.axes[1]) > 0.12) mz += gp.axes[1];
+  }
+
+  const running = keys.ShiftLeft || keys.ShiftRight;
+  const spd = running ? RUN_SPEED : WALK_SPEED;
+
+  _f.set(0,0,-1).applyQuaternion(camera.quaternion); _f.y=0; _f.normalize();
+  _r.set(1,0, 0).applyQuaternion(camera.quaternion); _r.y=0; _r.normalize();
+
+  // アクセル自動前進
+  if (cruiseSpeed > 0) {
+    if (autoDrive) {
+      // 自動運転：視点に関係なく常に直進（-Z方向）
+      camera.position.z -= cruiseSpeed * dt;
+    } else {
+      camera.position.x += _f.x * cruiseSpeed * dt;
+      camera.position.z += _f.z * cruiseSpeed * dt;
+    }
+  }
+
+  // WASD追加移動
+  if (mx || mz) {
+    camera.position.x += (_f.x*(-mz) + _r.x*mx) * spd * dt;
+    camera.position.z += (_f.z*(-mz) + _r.z*mx) * spd * dt;
+  }
+
+  // 自動運転：X=3.6（中央）へ緩やかに補正
+  if (autoDrive) {
+    camera.position.x += (3.6 - camera.position.x) * Math.min(1, dt * 2.0);
+  }
+
+  // X方向は壁で制限、Z方向はループ
+  camera.position.x = Math.max(PLAY_X_MIN + PLAYER_R, Math.min(PLAY_X_MAX - PLAYER_R, camera.position.x));
+  if (camera.position.z <= swapTriggerZ) {
+    swapModels();
+    handleLoopTransition();
+    swapTriggerZ -= LOOP_LENGTH;
+  }
+
+  // Gフォース（加速→上、減速→下）
+  const gTarget = (accel && !brake) ? PITCH_ACCEL_MAX : (brake ? PITCH_BRAKE_MAX : 0);
+  pitchGForce  += (gTarget - pitchGForce) * Math.min(3.5 * dt, 1);
+  camera.rotation.x = pitch + pitchGForce;
+
+  // カメラロール（マウス横移動による荷重感）
+  cameraRoll  = Math.max(-0.18, Math.min(0.18, cameraRoll));
+  cameraRoll *= Math.pow(0.04, dt);
+  camera.rotation.z = cameraRoll;
+
+}
+
+// ── 遠景山並み（3重シリンダー）────────────────────────────────────────────
+function buildMountainRings() {
+  function makeMtnTex(seed, color, rangeScale = 1.0) {
+    const W = 2048, H = 512;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    const profile = new Float32Array(W + 1);
+    for (let x = 0; x <= W; x++) {
+      const t = x / W * Math.PI * 2;
+      let h = 0;
+      h += 0.30 * Math.sin(t * 3  + seed);
+      h += 0.20 * Math.sin(t * 7  + seed * 1.3);
+      h += 0.10 * Math.sin(t * 13 + seed * 0.7);
+      h += 0.05 * Math.sin(t * 23 + seed * 2.1);
+      h += 0.03 * Math.sin(t * 41 + seed * 1.7);
+      profile[x] = h;
+    }
+    const mn = Math.min(...profile), mx = Math.max(...profile);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W; x++) {
+      const n = (profile[x] - mn) / (mx - mn);
+      ctx.lineTo(x, H * (0.60 + (1 - n) * 0.38 * rangeScale));
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+    return new THREE.CanvasTexture(cv);
+  }
+
+  const layers = [
+    { r: 150, h: 90,  cy: 15, color: '#8a7860', seed: 1.2, rs: 37/90  },
+    { r: 260, h: 95,  cy: 17, color: '#7a7890', seed: 2.7, rs: 43/95  },
+    { r: 400, h: 100, cy: 20, color: '#9898b0', seed: 4.1, rs: 53/100 },
+  ];
+
+  const rings = [];
+  for (const L of layers) {
+    const mat = new THREE.MeshBasicMaterial({
+      map: makeMtnTex(L.seed, L.color, L.rs),
+      side: THREE.BackSide,
+      transparent: true,
+      alphaTest: 0.05,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(L.r, L.r, L.h, 64, 1, true),
+      mat
+    );
+    mesh.position.y = L.cy;
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+    rings.push(mesh);
+  }
+  return rings;
+}
+const mountainRings = buildMountainRings();
+
+// ── レンダーループ ────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  updateMovement();
+  for (const ring of mountainRings) {
+    ring.position.x = camera.position.x;
+    ring.position.z = camera.position.z;
+  }
+  // 空色キー調整（60ms間隔）
+  const colorNow = performance.now();
+  if (colorNow - lastColorT > 60) {
+    lastColorT = colorNow;
+    let colorChanged = false;
+    if (keys.KeyW) { skyH = (skyH + 0.005) % 1;             colorChanged = true; }
+    if (keys.KeyE) { skyH = (skyH - 0.005 + 1) % 1;         colorChanged = true; }
+    if (keys.KeyR) { skyL = Math.max(0.02, skyL - 0.02);    colorChanged = true; }
+    if (keys.KeyT) { skyL = Math.min(0.98, skyL + 0.02);    colorChanged = true; }
+    if (keys.KeyS) { horizH = (horizH + 0.005) % 1;         colorChanged = true; }
+    if (keys.KeyD) { horizH = (horizH - 0.005 + 1) % 1;     colorChanged = true; }
+    if (keys.KeyF) { horizL = Math.max(0.02, horizL - 0.02); colorChanged = true; }
+    if (keys.KeyG) { horizL = Math.min(0.98, horizL + 0.02); colorChanged = true; }
+    if (colorChanged) rebuildSkyColors();
+  }
+
+  // 空グラデーション遷移
+  const sp = 0.025;
+  skyUniforms.topColor.value.lerp(skyTopTarget, sp);
+  skyUniforms.horizonColor.value.lerp(skyHorizTarget, sp);
+  skyUniforms.horizonBandColor.value.lerp(skyHorizBandTarget, sp);
+  scene.fog.color.lerp(skyTopTarget, sp);
+  _ambientTarget.lerpColors(_ambientWhite, skyHorizTarget, 0.75);
+  ambientLight.color.lerp(_ambientTarget, sp);
+  skyMesh.position.copy(camera.position);
+  window._updateRain();
+  window._updateStars();
+  checkSpecialSchedule();
+  document.getElementById('coords').textContent =
+    `X:${camera.position.x.toFixed(1)}  Z:${camera.position.z.toFixed(1)}  ${Math.round(cruiseSpeed / MAX_CRUISE * 180)} km/h`;
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ── ラジオプレイヤー ──────────────────────────────────────────────────────
+const radioAudio = new Audio();
+let radioHls     = null;
+let radioActive  = false;
+
+function playRadio(url) {
+  if (radioHls) { radioHls.destroy(); radioHls = null; }
+  radioAudio.pause();
+  radioAudio.volume = Math.min(1, parseInt(ytVolSlider.value) / 100 * currentVolAdj);
+  if (typeof Hls !== 'undefined' && Hls.isSupported() && /\.m3u8/i.test(url)) {
+    radioHls = new Hls();
+    radioHls.loadSource(url);
+    radioHls.attachMedia(radioAudio);
+    radioHls.on(Hls.Events.MANIFEST_PARSED, () => radioAudio.play().catch(console.error));
+  } else {
+    radioAudio.src = url;
+    radioAudio.play().catch(console.error);
+  }
+  radioActive = true;
+}
+
+function stopRadio() {
+  if (radioHls) { radioHls.destroy(); radioHls = null; }
+  radioAudio.pause();
+  radioAudio.src = '';
+  radioActive = false;
+}
+
+radioAudio.addEventListener('playing', () => {
+  connectingEl.style.display = 'none';
+});
+</script>
+</body>
+</html>
