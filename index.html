@@ -160,12 +160,14 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #dpad-corner-bl { grid-area:3/1; background:transparent!important; box-shadow:none!important; }
 #dpad-corner-br { grid-area:3/3; background:transparent!important; box-shadow:none!important; }
 
-#sliders-area { flex:1; display:flex; flex-direction:column; justify-content:center; }
+#sliders-area { flex:1; display:flex; flex-direction:column; justify-content:center; gap:3px; }
 .slider-panel {
   background:linear-gradient(160deg,#b8b49e,#a8a490); border-radius:12px; padding:10px 14px 8px;
   box-shadow:inset 3px 3px 7px rgba(0,0,0,.28), inset -1px -1px 3px rgba(255,255,255,.32);
 }
+#sliders-area .slider-panel { padding:4px 10px 3px; }
 .tick-row { height:8px; padding:0 2px; margin-bottom:6px; background:repeating-linear-gradient(to right,#888 0px,#888 1px,transparent 1px,transparent 7px); background-size:calc(100%/13) 100%; }
+#sliders-area .tick-row { height:4px; margin-bottom:2px; }
 
 input[type=range] { width:100%; height:56px; -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
 input[type=range]::-webkit-slider-runnable-track { height:5px; background:linear-gradient(to right,#666,#888); border-radius:3px; box-shadow:inset 2px 2px 5px rgba(0,0,0,.6); }
@@ -177,8 +179,24 @@ input[type=range]::-webkit-slider-thumb {
 }
 input[type=range]::-moz-range-track { height:5px; background:#777; border-radius:3px; }
 input[type=range]::-moz-range-thumb { width:18px; height:52px; background:repeating-linear-gradient(to bottom,#444 0px,#444 2px,#111 2px,#111 5px); border-radius:3px; border:none; box-shadow:2px 2px 6px rgba(0,0,0,.7); }
+#sliders-area input[type=range] { height:28px; }
+#sliders-area input[type=range]::-webkit-slider-thumb { height:24px; margin-top:-10px; }
+#sliders-area input[type=range]::-moz-range-thumb { height:24px; }
 
 .slider-label { text-align:center; font-size:clamp(13px,3.2vw,16px); color:#1a1810; letter-spacing:.05em; margin-top:4px; }
+#sliders-area .slider-label { font-size:clamp(10px,2.4vw,13px); margin-top:1px; }
+
+#toggle-row { display:flex; justify-content:space-around; align-items:center; padding:2px 4px; }
+.toggle-btn-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.toggle-btn {
+  width:clamp(52px,16vw,72px); height:clamp(36px,11vw,50px); border-radius:8px; border:none;
+  background:linear-gradient(145deg,#2e2e2e,#111);
+  box-shadow:3px 3px 8px rgba(0,0,0,.55), -1px -1px 3px rgba(255,255,255,.12);
+  cursor:pointer; color:#888; font-family:inherit; font-size:clamp(9px,2.3vw,12px);
+  transition:all .1s; line-height:1.2; white-space:nowrap;
+}
+.toggle-btn:active { box-shadow:inset 2px 2px 7px rgba(0,0,0,.7); transform:scale(.94); }
+.toggle-btn.active { background:linear-gradient(145deg,#4aaa4a,#2a7a2a); color:#fff; }
 
 #buttons-row { flex:1; display:flex; justify-content:space-around; align-items:center; padding:0 2px; }
 .action-btn-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -265,9 +283,31 @@ body.screen-only #screen-wrapper::before { display:none; }
       <div id="sliders-area">
         <div class="slider-panel">
           <div class="tick-row"></div>
+          <input type="range" id="sky-color-slider" min="0" max="100" value="59">
+          <div class="slider-label">色調</div>
+        </div>
+        <div class="slider-panel">
+          <div class="tick-row"></div>
+          <input type="range" id="sky-bright-slider" min="0" max="100" value="75">
+          <div class="slider-label">明暗</div>
+        </div>
+        <div class="slider-panel">
+          <div class="tick-row"></div>
           <input type="range" id="speed-slider" min="0" max="100" value="0">
           <div class="slider-label">スピード</div>
         </div>
+      </div>
+    </div>
+
+    <div id="toggle-row">
+      <div class="toggle-btn-wrap">
+        <button class="toggle-btn active" id="btn-sky-mode">空</button>
+      </div>
+      <div class="toggle-btn-wrap">
+        <button class="toggle-btn" id="btn-rain">雨</button>
+      </div>
+      <div class="toggle-btn-wrap">
+        <button class="toggle-btn" id="btn-star">星</button>
       </div>
     </div>
 
@@ -428,12 +468,45 @@ let skyHorizTarget     = new THREE.Color(0xc8daf0);
 let skyHorizBandTarget = new THREE.Color(0xc8daf0);
 let skyIsBlack = false;
 
+let skyH = 0.592, skyS = 0.63, skyL = 0.76;
+let horizH = 0.583, horizS = 0.24, horizL = 0.79;
+let skySliderMode = 0; // 0=空, 1=地平線
+
+function applySkySliders() {
+  if (skySliderMode === 0) {
+    const base = new THREE.Color().setHSL(skyH, skyS, skyL);
+    skyTopTarget.copy(base).multiplyScalar(0.42);
+  } else {
+    skyHorizTarget = new THREE.Color().setHSL(horizH, horizS, horizL);
+    skyHorizBandTarget.copy(skyHorizTarget);
+  }
+  skyIsBlack = false;
+}
+
+function syncSkySliders() {
+  const colorEl = document.getElementById('sky-color-slider');
+  const brightEl = document.getElementById('sky-bright-slider');
+  if (!colorEl || !brightEl) return;
+  if (skySliderMode === 0) {
+    colorEl.value = Math.round(skyH * 100);
+    brightEl.value = Math.round(Math.max(0, Math.min(100, (skyL - 0.1) / 0.88 * 100)));
+  } else {
+    colorEl.value = Math.round(horizH * 100);
+    brightEl.value = Math.round(Math.max(0, Math.min(100, (horizL - 0.1) / 0.88 * 100)));
+  }
+}
+
 function setSkyFromColor(hex, solid = false) {
   skyIsBlack = hex.toLowerCase() === '#000000';
   const base = new THREE.Color(hex);
   skyTopTarget.copy(base).multiplyScalar(0.42);
   skyHorizTarget = solid ? skyTopTarget.clone() : base.clone().lerp(new THREE.Color(0xddd8c8), 0.52);
   skyHorizBandTarget.copy(skyHorizTarget);
+  const hsl = {}; base.getHSL(hsl);
+  skyH = hsl.h; skyS = hsl.s; skyL = hsl.l;
+  skyHorizTarget.getHSL(hsl);
+  horizH = hsl.h; horizS = hsl.s; horizL = hsl.l;
+  syncSkySliders();
 }
 function setSkyHorizBand(hex) {
   if (hex) skyHorizBandTarget.set(hex); else skyHorizBandTarget.copy(skyHorizTarget);
@@ -859,6 +932,21 @@ ytVolSlider.addEventListener('input',e=>{
   baseVol=parseInt(e.target.value); applyVolAdj();
 });
 
+const skyColorSlider = document.getElementById('sky-color-slider');
+const skyBrightSlider = document.getElementById('sky-bright-slider');
+skyColorSlider.addEventListener('input', e => {
+  const v = e.target.value / 100;
+  if (skySliderMode === 0) { skyH = v; }
+  else { horizH = v; }
+  applySkySliders();
+});
+skyBrightSlider.addEventListener('input', e => {
+  const v = 0.1 + e.target.value / 100 * 0.88;
+  if (skySliderMode === 0) { skyL = v; }
+  else { horizL = v; }
+  applySkySliders();
+});
+
 let touchIsDrag=false, lastTapTime=0;
 const DRAG_THRESHOLD=8;
 wrapper.addEventListener('touchstart',e=>{
@@ -972,6 +1060,24 @@ btnAuto.addEventListener('click',()=>{
 
 btnSoundBtn.addEventListener('click',()=>{
   soundPanel.style.display=soundPanel.style.display==='flex'?'none':'flex';
+});
+
+const btnSkyMode = document.getElementById('btn-sky-mode');
+const btnRain    = document.getElementById('btn-rain');
+const btnStar    = document.getElementById('btn-star');
+const skyModeLabels = ['空', '地平線'];
+btnSkyMode.addEventListener('click', () => {
+  skySliderMode = (skySliderMode + 1) % 2;
+  btnSkyMode.textContent = skyModeLabels[skySliderMode];
+  syncSkySliders();
+});
+btnRain.addEventListener('click', () => {
+  rainActive = !rainActive;
+  btnRain.classList.toggle('active', rainActive);
+});
+btnStar.addEventListener('click', () => {
+  starActive = !starActive;
+  btnStar.classList.toggle('active', starActive);
 });
 
 let fsState=0;
