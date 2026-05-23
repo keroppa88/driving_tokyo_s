@@ -115,6 +115,38 @@
     <div id="now-playing"></div>
   </div>
 
+  <div class="vol-section">
+    <h2>── 空の色 ──</h2>
+    <div class="vol-row">
+      <label>空　色相</label>
+      <input type="range" id="sky-hue" min="0" max="360" value="213">
+      <span id="sky-hue-lbl">213°</span>
+    </div>
+    <div class="vol-row">
+      <label>空　明暗</label>
+      <input type="range" id="sky-lgt" min="2" max="97" value="76">
+      <span id="sky-lgt-lbl">76%</span>
+    </div>
+    <div class="vol-row">
+      <label>地平線色相</label>
+      <input type="range" id="hor-hue" min="0" max="360" value="210">
+      <span id="hor-hue-lbl">210°</span>
+    </div>
+    <div class="vol-row">
+      <label>地平線明暗</label>
+      <input type="range" id="hor-lgt" min="2" max="97" value="79">
+      <span id="hor-lgt-lbl">79%</span>
+    </div>
+    <div style="display:flex;gap:24px;margin-top:0.6em;font-size:0.85rem;">
+      <label style="cursor:pointer;user-select:none;">
+        <input type="checkbox" id="rain-cb" style="margin-right:0.3em;vertical-align:middle;">雨
+      </label>
+      <label style="cursor:pointer;user-select:none;">
+        <input type="checkbox" id="star-cb" style="margin-right:0.3em;vertical-align:middle;">星
+      </label>
+    </div>
+  </div>
+
   <div style="margin:0.8em 0 0.4em; font-size:0.95rem;">
     <label style="cursor:pointer; user-select:none;">
       <input type="checkbox" id="auto-drive" style="margin-right:0.4em; width:1em; height:1em; vertical-align:middle;">
@@ -255,11 +287,26 @@ let skyH = 0.592, skyS = 0.63, skyL = 0.76;
 let horizH = 0.583, horizS = 0.24, horizL = 0.79;
 let lastColorT = 0;
 
+function syncSkySliders() {
+  const sH = document.getElementById('sky-hue');
+  const sL = document.getElementById('sky-lgt');
+  const hH = document.getElementById('hor-hue');
+  const hL = document.getElementById('hor-lgt');
+  if (!sH) return;
+  const sv = Math.round(skyH * 360), sl = Math.round(skyL * 100);
+  const hv = Math.round(horizH * 360), hl = Math.round(horizL * 100);
+  sH.value = sv; document.getElementById('sky-hue-lbl').textContent = sv + '°';
+  sL.value = sl; document.getElementById('sky-lgt-lbl').textContent = sl + '%';
+  hH.value = hv; document.getElementById('hor-hue-lbl').textContent = hv + '°';
+  hL.value = hl; document.getElementById('hor-lgt-lbl').textContent = hl + '%';
+}
+
 function rebuildSkyColors() {
   const skyBase = new THREE.Color().setHSL(skyH, skyS, skyL);
   skyTopTarget.copy(skyBase).multiplyScalar(0.42);
   skyHorizTarget.setHSL(horizH, horizS, horizL);
   skyHorizBandTarget.copy(skyHorizTarget);
+  syncSkySliders();
 }
 
 function setSkyFromColor(hex, solid = false) {
@@ -901,6 +948,36 @@ ytVolSlider.addEventListener('input', () => {
   radioAudio.volume = Math.min(1, Math.max(0, v / 100 * currentVolAdj));
   ytVolLbl.textContent = v + '%';
 });
+
+// ── 空・地平線スライダー ──────────────────────────────────────────────────
+{
+  const sH = document.getElementById('sky-hue');
+  const sL = document.getElementById('sky-lgt');
+  const hH = document.getElementById('hor-hue');
+  const hL = document.getElementById('hor-lgt');
+  sH.addEventListener('input', () => {
+    skyH = parseInt(sH.value) / 360;
+    document.getElementById('sky-hue-lbl').textContent = sH.value + '°';
+    rebuildSkyColors();
+  });
+  sL.addEventListener('input', () => {
+    skyL = parseInt(sL.value) / 100;
+    document.getElementById('sky-lgt-lbl').textContent = sL.value + '%';
+    rebuildSkyColors();
+  });
+  hH.addEventListener('input', () => {
+    horizH = parseInt(hH.value) / 360;
+    document.getElementById('hor-hue-lbl').textContent = hH.value + '°';
+    rebuildSkyColors();
+  });
+  hL.addEventListener('input', () => {
+    horizL = parseInt(hL.value) / 100;
+    document.getElementById('hor-lgt-lbl').textContent = hL.value + '%';
+    rebuildSkyColors();
+  });
+  document.getElementById('rain-cb').addEventListener('change', e => { rainActive = e.target.checked; });
+  document.getElementById('star-cb').addEventListener('change', e => { starActive = e.target.checked; });
+}
 
 // ページ読み込み時点でYouTube準備を開始（ユーザー操作不要）
 loadPlaylist().then(() => initYTPlayer()).catch(console.error);
