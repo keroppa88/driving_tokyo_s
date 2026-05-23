@@ -137,7 +137,7 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #controls-mid { flex:4; display:flex; align-items:stretch; gap:8px; }
 
 #dpad-housing {
-  align-self:center; height:75%; aspect-ratio:1; flex-shrink:0; max-width:210px;
+  align-self:center; height:67.5%; aspect-ratio:1; flex-shrink:0; max-width:210px;
   background:none; border:none; padding:0; box-shadow:none; border-radius:0;
 }
 #dpad { width:100%; height:100%; display:grid; grid-template-columns:1fr 1.1fr 1fr; grid-template-rows:1fr 1.1fr 1fr; gap:2px; }
@@ -160,7 +160,7 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #dpad-corner-bl { grid-area:3/1; background:transparent!important; box-shadow:none!important; }
 #dpad-corner-br { grid-area:3/3; background:transparent!important; box-shadow:none!important; }
 
-#sliders-area { flex:1; display:flex; flex-direction:column; justify-content:center; gap:5px; }
+#sliders-area { flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:5px; }
 .slider-panel {
   background:linear-gradient(160deg,#b8b49e,#a8a490); border-radius:12px; padding:10px 14px 8px;
   box-shadow:inset 3px 3px 7px rgba(0,0,0,.28), inset -1px -1px 3px rgba(255,255,255,.32);
@@ -169,9 +169,9 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
   background:linear-gradient(160deg,#a8a48e,#989080);
   border-radius:12px; padding:6px 10px 4px;
   box-shadow:inset 4px 4px 9px rgba(0,0,0,.38), inset -1px -1px 3px rgba(255,255,255,.22);
-  display:flex; flex-direction:column; gap:2px;
+  display:flex; flex-direction:row; gap:8px;
 }
-.slider-row { display:flex; flex-direction:column; }
+.slider-row { display:flex; flex-direction:column; flex:1; }
 .tick-row { height:8px; padding:0 2px; margin-bottom:6px; background:repeating-linear-gradient(to right,#888 0px,#888 1px,transparent 1px,transparent 7px); background-size:calc(100%/13) 100%; }
 #slider-container .tick-row { height:4px; margin-bottom:2px; }
 
@@ -206,25 +206,24 @@ input[type=range]::-moz-range-thumb { width:18px; height:52px; background:repeat
 .toggle-btn:active { box-shadow:inset 3px 3px 8px rgba(0,0,0,.95); transform:scale(.96); }
 .toggle-btn.active { color:#1a2e1a; }
 .toggle-label { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; text-align:center; white-space:nowrap; }
-#sky-switch-wrap { display:flex; align-items:center; justify-content:center; gap:4px; width:100%; }
-.sky-switch-label { font-size:clamp(7px,2vw,10px); color:#6aba6a; font-weight:bold; white-space:nowrap; }
-#sky-lbl-sky { color:#6aba6a; }
-#sky-lbl-horiz { color:#4a8a4a; }
 .sky-switch {
-  position:relative; width:clamp(34px,10vw,48px); height:clamp(16px,5vw,22px);
+  position:relative; width:100%; height:clamp(26px,8.5vw,38px);
   background:#2d5a2d; border-radius:99px;
   box-shadow:inset 2px 2px 5px rgba(0,0,0,.6), inset -1px -1px 3px rgba(255,255,255,.1);
-  cursor:pointer; flex-shrink:0; transition:background .2s;
+  cursor:pointer; transition:background .2s;
 }
 .sky-switch.on { background:#3a7a3a; }
 .sky-knob {
-  position:absolute; top:2px; left:2px;
-  width:calc(50% - 2px); height:calc(100% - 4px);
+  position:absolute; top:3px; bottom:3px; left:3px;
+  width:calc(50% - 4px);
   background:#cc2222; border-radius:99px;
   box-shadow:1px 1px 4px rgba(0,0,0,.7);
-  transition:left .2s; pointer-events:none;
+  transition:transform .2s; pointer-events:none;
 }
-.sky-switch.on .sky-knob { left:calc(50%); }
+.sky-switch.on .sky-knob { transform:translateX(calc(100% + 2px)); }
+.sky-switch-ends { display:flex; justify-content:space-between; width:100%; }
+.sky-switch-ends span { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; }
+#speed-row { display:flex; flex-direction:column; }
 
 #buttons-row { flex:1; display:flex; justify-content:space-around; align-items:center; padding:0 2px; }
 .action-btn-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -320,11 +319,6 @@ body.screen-only #screen-wrapper::before { display:none; }
             <input type="range" id="sky-bright-slider" min="0" max="100" value="89">
             <div class="slider-label">明暗</div>
           </div>
-          <div class="slider-row">
-            <div class="tick-row"></div>
-            <input type="range" id="speed-slider" min="0" max="100" value="0">
-            <div class="slider-label">スピード</div>
-          </div>
         </div>
         <div id="toggle-row">
           <div class="toggle-wrap">
@@ -337,25 +331,29 @@ body.screen-only #screen-wrapper::before { display:none; }
           </div>
           <div class="toggle-wrap">
             <button class="toggle-btn" id="btn-rain">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M20 16.2A5 5 0 0018 7h-1.26a8 8 0 10-11.62 9"/>
-                <line x1="8" y1="19" x2="8" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="20"/>
-                <line x1="16" y1="19" x2="16" y2="21"/>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 12a11.05 11.05 0 0 0-22 0z"/>
+                <path d="M12 12v5.5a2.5 2.5 0 0 1-5 0"/>
+                <line x1="7" y1="17" x2="6.5" y2="20"/>
+                <line x1="17" y1="17" x2="16.5" y2="20"/>
               </svg>
             </button>
             <span class="toggle-label">雨</span>
           </div>
           <div class="toggle-wrap wide">
-            <div id="sky-switch-wrap">
-              <span class="sky-switch-label" id="sky-lbl-horiz">地平線</span>
-              <div id="sky-switch" class="sky-switch">
-                <div id="sky-knob" class="sky-knob"></div>
-              </div>
-              <span class="sky-switch-label" id="sky-lbl-sky">空</span>
+            <div id="sky-switch" class="sky-switch">
+              <div id="sky-knob" class="sky-knob"></div>
             </div>
-            <span class="toggle-label">空・地平線</span>
+            <div class="sky-switch-ends">
+              <span>空</span>
+              <span>地平線</span>
+            </div>
           </div>
+        </div>
+        <div id="speed-row">
+          <div class="tick-row"></div>
+          <input type="range" id="speed-slider" min="0" max="100" value="0">
+          <div class="slider-label">スピード</div>
         </div>
       </div>
     </div>
@@ -1111,16 +1109,11 @@ btnSoundBtn.addEventListener('click',()=>{
 });
 
 const skySwitch  = document.getElementById('sky-switch');
-const skyLblSky  = document.getElementById('sky-lbl-sky');
-const skyLblHoriz= document.getElementById('sky-lbl-horiz');
 const btnRain    = document.getElementById('btn-rain');
 const btnStar    = document.getElementById('btn-star');
 // sky-switch: right=on=空(0), left=off=地平線(1)
 function updateSkySwitch() {
-  const isSky = skySliderMode === 0;
-  skySwitch.classList.toggle('on', isSky);
-  skyLblSky.style.color   = isSky ? '#6aba6a' : '#4a8a4a';
-  skyLblHoriz.style.color = isSky ? '#4a8a4a' : '#6aba6a';
+  skySwitch.classList.toggle('on', skySliderMode === 0);
 }
 skySwitch.addEventListener('click', () => {
   skySliderMode = skySliderMode === 0 ? 1 : 0;
