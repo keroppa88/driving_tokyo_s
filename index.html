@@ -474,8 +474,7 @@ let skySliderMode = 0; // 0=空, 1=地平線
 
 function applySkySliders() {
   if (skySliderMode === 0) {
-    const base = new THREE.Color().setHSL(skyH, skyS, skyL);
-    skyTopTarget.copy(base).multiplyScalar(0.42);
+    skyTopTarget.setHSL(skyH, skyS, skyL);
   } else {
     skyHorizTarget = new THREE.Color().setHSL(horizH, horizS, horizL);
     skyHorizBandTarget.copy(skyHorizTarget);
