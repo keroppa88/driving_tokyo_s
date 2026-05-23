@@ -192,23 +192,39 @@ input[type=range]::-moz-range-thumb { width:18px; height:52px; background:repeat
 .slider-label { text-align:center; font-size:clamp(13px,3.2vw,16px); color:#1a1810; letter-spacing:.05em; margin-top:4px; }
 #slider-container .slider-label { font-size:clamp(9px,2.3vw,12px); margin-top:1px; color:#2a2818; }
 
-#toggle-row { display:flex; justify-content:space-between; align-items:center; padding:1px 2px; }
+#toggle-row { display:flex; gap:4px; align-items:flex-start; padding:2px 0; }
+.toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; }
+.toggle-wrap.wide { flex:2; }
 .toggle-btn {
-  border:none; cursor:pointer; font-family:inherit; font-size:clamp(8px,2.2vw,11px);
-  background:linear-gradient(145deg,#2e2e2e,#111);
-  box-shadow:3px 3px 8px rgba(0,0,0,.55), -1px -1px 3px rgba(255,255,255,.12);
-  color:#888; transition:all .1s; white-space:nowrap;
-  display:flex; align-items:center; justify-content:center;
+  width:100%; height:clamp(26px,8.5vw,38px); border:none; border-radius:6px;
+  background:#0d0d0d;
+  box-shadow:inset 1px 1px 4px rgba(0,0,0,.95), 2px 2px 5px rgba(0,0,0,.55);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:color .15s; color:#6aba6a;
 }
-.toggle-btn:active { box-shadow:inset 2px 2px 7px rgba(0,0,0,.7); transform:scale(.94); }
-.toggle-btn.active { background:linear-gradient(145deg,#4aaa4a,#2a7a2a); color:#fff; }
-#btn-rain, #btn-star {
-  width:clamp(28px,9vw,40px); height:clamp(28px,9vw,40px); border-radius:50%;
+.toggle-btn svg { width:55%; height:55%; }
+.toggle-btn:active { box-shadow:inset 3px 3px 8px rgba(0,0,0,.95); transform:scale(.96); }
+.toggle-btn.active { color:#1a2e1a; }
+.toggle-label { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; text-align:center; white-space:nowrap; }
+#sky-switch-wrap { display:flex; align-items:center; justify-content:center; gap:4px; width:100%; }
+.sky-switch-label { font-size:clamp(7px,2vw,10px); color:#6aba6a; font-weight:bold; white-space:nowrap; }
+#sky-lbl-sky { color:#6aba6a; }
+#sky-lbl-horiz { color:#4a8a4a; }
+.sky-switch {
+  position:relative; width:clamp(34px,10vw,48px); height:clamp(16px,5vw,22px);
+  background:#2d5a2d; border-radius:99px;
+  box-shadow:inset 2px 2px 5px rgba(0,0,0,.6), inset -1px -1px 3px rgba(255,255,255,.1);
+  cursor:pointer; flex-shrink:0; transition:background .2s;
 }
-#btn-sky-mode {
-  height:clamp(28px,9vw,40px); padding:0 8px; border-radius:8px;
-  min-width:clamp(52px,16vw,72px);
+.sky-switch.on { background:#3a7a3a; }
+.sky-knob {
+  position:absolute; top:2px; left:2px;
+  width:calc(50% - 2px); height:calc(100% - 4px);
+  background:#cc2222; border-radius:99px;
+  box-shadow:1px 1px 4px rgba(0,0,0,.7);
+  transition:left .2s; pointer-events:none;
 }
+.sky-switch.on .sky-knob { left:calc(50%); }
 
 #buttons-row { flex:1; display:flex; justify-content:space-around; align-items:center; padding:0 2px; }
 .action-btn-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -311,9 +327,35 @@ body.screen-only #screen-wrapper::before { display:none; }
           </div>
         </div>
         <div id="toggle-row">
-          <button class="toggle-btn active" id="btn-star">星</button>
-          <button class="toggle-btn" id="btn-rain">雨</button>
-          <button class="toggle-btn active" id="btn-sky-mode">空</button>
+          <div class="toggle-wrap">
+            <button class="toggle-btn" id="btn-star">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+              </svg>
+            </button>
+            <span class="toggle-label">星</span>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle-btn" id="btn-rain">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M20 16.2A5 5 0 0018 7h-1.26a8 8 0 10-11.62 9"/>
+                <line x1="8" y1="19" x2="8" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="20"/>
+                <line x1="16" y1="19" x2="16" y2="21"/>
+              </svg>
+            </button>
+            <span class="toggle-label">雨</span>
+          </div>
+          <div class="toggle-wrap wide">
+            <div id="sky-switch-wrap">
+              <span class="sky-switch-label" id="sky-lbl-horiz">地平線</span>
+              <div id="sky-switch" class="sky-switch">
+                <div id="sky-knob" class="sky-knob"></div>
+              </div>
+              <span class="sky-switch-label" id="sky-lbl-sky">空</span>
+            </div>
+            <span class="toggle-label">空・地平線</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1068,15 +1110,24 @@ btnSoundBtn.addEventListener('click',()=>{
   soundPanel.style.display=soundPanel.style.display==='flex'?'none':'flex';
 });
 
-const btnSkyMode = document.getElementById('btn-sky-mode');
+const skySwitch  = document.getElementById('sky-switch');
+const skyLblSky  = document.getElementById('sky-lbl-sky');
+const skyLblHoriz= document.getElementById('sky-lbl-horiz');
 const btnRain    = document.getElementById('btn-rain');
 const btnStar    = document.getElementById('btn-star');
-const skyModeLabels = ['空', '地平線'];
-btnSkyMode.addEventListener('click', () => {
-  skySliderMode = (skySliderMode + 1) % 2;
-  btnSkyMode.textContent = skyModeLabels[skySliderMode];
+// sky-switch: right=on=空(0), left=off=地平線(1)
+function updateSkySwitch() {
+  const isSky = skySliderMode === 0;
+  skySwitch.classList.toggle('on', isSky);
+  skyLblSky.style.color   = isSky ? '#6aba6a' : '#4a8a4a';
+  skyLblHoriz.style.color = isSky ? '#4a8a4a' : '#6aba6a';
+}
+skySwitch.addEventListener('click', () => {
+  skySliderMode = skySliderMode === 0 ? 1 : 0;
+  updateSkySwitch();
   syncSkySliders();
 });
+updateSkySwitch();
 btnRain.addEventListener('click', () => {
   rainActive = !rainActive;
   btnRain.classList.toggle('active', rainActive);
