@@ -212,7 +212,8 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 .toggle-btn.active { color:#1a2e1a; }
 .toggle-label { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; text-align:center; white-space:nowrap; }
 .sky-switch {
-  position:relative; width:100%; height:clamp(21px,6.8vw,31px);
+  position:relative; display:flex; align-items:center; overflow:hidden;
+  width:100%; height:clamp(21px,6.8vw,31px);
   background:#2d5a2d; border-radius:99px;
   box-shadow:inset 2px 2px 5px rgba(0,0,0,.6), inset -1px -1px 3px rgba(255,255,255,.1);
   cursor:pointer; transition:background .2s;
@@ -223,11 +224,14 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
   width:calc(50% - 4px);
   background:#cc2222; border-radius:99px;
   box-shadow:1px 1px 4px rgba(0,0,0,.7);
-  transition:transform .2s; pointer-events:none;
+  transition:transform .2s; pointer-events:none; z-index:1;
 }
 .sky-switch.on .sky-knob { transform:translateX(calc(100% + 2px)); }
-.sky-switch-ends { display:flex; justify-content:space-between; width:100%; }
-.sky-switch-ends span { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; }
+.sky-sw-label {
+  position:relative; z-index:2; flex:1; text-align:center;
+  font-size:clamp(7px,2vw,10px); font-weight:bold; color:#fff;
+  pointer-events:none; line-height:1;
+}
 #speed-row { display:flex; flex-direction:column; }
 
 #buttons-row { flex:1; display:flex; justify-content:space-around; align-items:center; padding:0 2px; }
@@ -332,7 +336,6 @@ body.screen-only #screen-wrapper::before { display:none; }
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
               </svg>
             </button>
-            <span class="toggle-label">星</span>
           </div>
           <div class="toggle-wrap">
             <button class="toggle-btn" id="btn-rain">
@@ -343,15 +346,12 @@ body.screen-only #screen-wrapper::before { display:none; }
                 <line x1="17" y1="17" x2="16.5" y2="20"/>
               </svg>
             </button>
-            <span class="toggle-label">雨</span>
           </div>
           <div class="toggle-wrap wide">
             <div id="sky-switch" class="sky-switch">
+              <span class="sky-sw-label">地平線</span>
               <div id="sky-knob" class="sky-knob"></div>
-            </div>
-            <div class="sky-switch-ends">
-              <span>空</span>
-              <span>地平線</span>
+              <span class="sky-sw-label">空</span>
             </div>
           </div>
         </div>
