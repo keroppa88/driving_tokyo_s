@@ -837,6 +837,9 @@ loadPlaylist().then(()=>initYTPlayer()).catch(console.error);
 //  MOBILE INPUT STATE
 // ─────────────────────────────────────────────
 let yaw=0, pitch=0, pitchShake=0, shakePhase=0, shakeT0=performance.now();
+let pitchGForce=0, prevCruiseSpeed=0;
+const PITCH_ACCEL_MAX =  7.5 * Math.PI / 180;
+const PITCH_BRAKE_MAX = -(8 / 3) * Math.PI / 180;
 let touchActive=false, touchLastX=0, touchLastY=0;
 let gameActive=false, autoPilot=false;
 let cruiseSpeed=0;
@@ -1071,6 +1074,9 @@ function updateMovement(dt){
   updateCruiseBgm();
 
   cruiseSpeed=+speedSlider.value/100*MAX_CRUISE;
+  const speedDelta=cruiseSpeed-prevCruiseSpeed; prevCruiseSpeed=cruiseSpeed;
+  const gTarget=speedDelta>0?PITCH_ACCEL_MAX:(speedDelta<0?PITCH_BRAKE_MAX:0);
+  pitchGForce+=(gTarget-pitchGForce)*Math.min(3.5*dt,1);
 
   if(cruiseSpeed>0){
     if(autoPilot){
@@ -1091,7 +1097,7 @@ function updateMovement(dt){
   shakePhase=0; pitchShake*=.85;
 
   camera.position.y=EYE_HEIGHT;
-  camera.rotation.set(pitch+pitchShake,effYaw,0);
+  camera.rotation.set(pitch+pitchShake+pitchGForce,effYaw,0);
 }
 
 function animate(){
