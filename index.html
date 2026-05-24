@@ -70,8 +70,12 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
   border-radius:9px; padding:12px;
 }
 #loading-screen { background:rgba(10,20,10,.95); color:#8dc88d; font-size:clamp(9px,2.5vw,13px); gap:8px; }
-#start-overlay  { background:rgba(8,15,8,.92); color:#aadaaa; gap:7px; }
+#start-overlay  { background:rgba(8,15,8,.92); color:#aadaaa; justify-content:space-between; }
 #start-overlay h1 { font-size:clamp(22px,6vw,32px); color:#c8e8c8; letter-spacing:.05em; text-align:center; margin-bottom:2px; }
+#overlay-top { display:flex; flex-direction:column; align-items:center; gap:6px; }
+#overlay-main { display:flex; flex-direction:column; align-items:flex-start; align-self:center; gap:8px; }
+#sub-btns { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+#sub-btns #explain-btn { align-self:center; }
 #start-overlay .ctrl-hint { font-size:clamp(6px,1.6vw,8.5px); color:#669966; text-align:center; line-height:1.6; }
 
 .vol-row-sm { display:flex; align-items:center; gap:6px; width:100%; }
@@ -273,11 +277,17 @@ body.screen-only #screen-wrapper::before { display:none; }
     </div>
 
     <div id="start-overlay" style="display:none">
-      <h1>Driving in Tokyo</h1>
-      <div id="audio-load-msg">読み込み中・・・</div>
-      <button id="start-btn" disabled>Start in Tokyo</button>
-      <a id="usa-btn" href="https://keroppa88.github.io/driving_us_s/" target="_blank">→Driving in The USA</a>
-      <button id="explain-btn">説明</button>
+      <div id="overlay-top">
+        <h1>Driving in Tokyo</h1>
+        <div id="audio-load-msg">読み込み中・・・</div>
+      </div>
+      <div id="overlay-main">
+        <button id="start-btn" disabled>Start in Tokyo</button>
+        <div id="sub-btns">
+          <a id="usa-btn" href="https://keroppa88.github.io/driving_us_s/" target="_blank">Driving in The USA</a>
+          <button id="explain-btn">説明</button>
+        </div>
+      </div>
     </div>
 
     <div id="sound-panel">
