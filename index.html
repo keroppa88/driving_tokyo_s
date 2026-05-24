@@ -174,7 +174,9 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #sky-btns-col .toggle-btn { width:100%; height:auto; aspect-ratio:1; border-radius:50%; }
 .tick-row { height:8px; padding:0 2px; margin-bottom:6px; background:repeating-linear-gradient(to right,#888 0px,#888 1px,transparent 1px,transparent 7px); background-size:calc(100%/13) 100%; }
 #slider-container .tick-row { height:2px; margin-bottom:1px; }
-#speed-row { display:flex; flex-direction:column; }
+#speed-row { display:flex; flex-direction:row; align-items:center; gap:5px; }
+#speed-slider-wrap { flex:1; }
+.speed-side-label { width:clamp(28px,9vw,40px); flex-shrink:0; text-align:center; font-size:clamp(11px,2.8vw,15px); font-weight:bold; color:#2a2818; }
 
 input[type=range] { width:100%; height:56px; -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
 input[type=range]::-webkit-slider-runnable-track { height:5px; background:linear-gradient(to right,#666,#888); border-radius:3px; box-shadow:inset 2px 2px 5px rgba(0,0,0,.6); }
@@ -194,7 +196,7 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 #speed-row input[type=range]::-moz-range-thumb { width:11px; height:24px; }
 
 .slider-label { text-align:center; font-size:clamp(13px,3.2vw,16px); color:#1a1810; letter-spacing:.05em; margin-top:4px; }
-#slider-container .slider-label { font-size:clamp(12px,3vw,16px); margin-top:2px; color:#2a2818; }
+#slider-container .slider-label { font-size:clamp(12px,3vw,16px); margin-top:2px; color:#2a2818; font-weight:bold; }
 #speed-row .slider-label { font-size:clamp(9px,2.3vw,12px); margin-top:1px; color:#2a2818; }
 
 .toggle-btn {
@@ -343,8 +345,11 @@ body.screen-only #screen-wrapper::before { display:none; }
           </div>
         </div>
         <div id="speed-row">
-          <input type="range" id="speed-slider" min="0" max="100" value="0">
-          <div class="slider-label">スピード</div>
+          <div id="speed-slider-wrap">
+            <input type="range" id="speed-slider" min="0" max="100" value="0">
+          </div>
+          <span class="speed-side-label">速度</span>
+        </div>
         </div>
       </div>
     </div>
