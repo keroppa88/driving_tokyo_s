@@ -401,7 +401,7 @@ body.screen-only #screen-wrapper::before { display:none; }
         </button>
       </div>
       <div class="action-btn-wrap">
-        <span class="btn-label" id="lbl-color">空　色</span>
+        <span class="btn-label" id="lbl-color">上空色</span>
         <button class="action-btn active" id="btn-fs">
           <svg id="fs-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
             <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
@@ -835,6 +835,17 @@ function handleLoopTransition(){
 
 // ─────────────────────────────────────────────
 //  TRAFFIC CARS
+function addOutline(obj, thickness=0.025){
+  const outlineMat=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.BackSide,transparent:false,depthWrite:true});
+  obj.traverse(c=>{
+    if(!c.isMesh||!c.visible)return;
+    const om=new THREE.Mesh(c.geometry,outlineMat);
+    om.scale.setScalar(1+thickness);
+    om.frustumCulled=false;
+    c.add(om);
+  });
+}
+
 // ─────────────────────────────────────────────
 const trafficCars=[
   {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:30000,lifetime:30000,oncoming:true},
@@ -900,6 +911,7 @@ function loadSpecialModel(file,px,py,pz){
       m.traverse(c=>{if(!c.isMesh)return;c.frustumCulled=false;
         const fix=mat=>{if(!mat)return;if(mat.color&&mat.color.r>.6&&mat.color.g<.35&&mat.color.b>.5){c.visible=false;return;}mat.transparent=false;mat.opacity=1;mat.depthWrite=true;mat.needsUpdate=true;};
         Array.isArray(c.material)?c.material.forEach(fix):fix(c.material);});
+      addOutline(m);
       m.scale.set(.4,.4,.4);m.position.set(px,py,pz);m.visible=false;scene.add(m);
       const mc=m.clone();mc.position.set(px,py,pz-LOOP_LENGTH);mc.visible=false;scene.add(mc);
       resolve({main:m,copy:mc});
@@ -912,6 +924,7 @@ new GLTFLoader().load('ty01.glb?v='+Date.now(), gltf=>{
   model.traverse(c=>{if(!c.isMesh)return;c.frustumCulled=false;
     const fix=m=>{if(!m)return;if(m.color&&m.color.r>.6&&m.color.g<.35&&m.color.b>.5){c.visible=false;return;}m.transparent=false;m.opacity=1;m.depthWrite=true;m.needsUpdate=true;};
     Array.isArray(c.material)?c.material.forEach(fix):fix(c.material);});
+  addOutline(model);
   model.scale.set(.4,.4,.4); model.updateMatrixWorld(true);
   const box=new THREE.Box3().setFromObject(model), cen=box.getCenter(new THREE.Vector3());
   model.position.set(0,0,-cen.z); scene.add(model); model.updateMatrixWorld(true);
@@ -1132,7 +1145,7 @@ function updateColorModeBtn(){
   fsIcon.setAttribute('fill', isSky ? 'currentColor' : 'none');
   fsIcon.setAttribute('stroke', isSky ? 'none' : 'currentColor');
   fsIcon.setAttribute('stroke-width', isSky ? '0' : '2');
-  document.getElementById('lbl-color').textContent = isSky ? '空　色' : '地平色';
+  document.getElementById('lbl-color').textContent = isSky ? '上空色' : '地平色';
   btnFs.classList.add('active');
 }
 btnFs.addEventListener('click',()=>{
