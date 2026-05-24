@@ -170,8 +170,8 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
   display:flex; flex-direction:column; gap:2px;
 }
 .slider-col { display:flex; flex-direction:column; }
-#sky-btns-col { display:flex; flex-direction:column; gap:4px; }
-#sky-btns-col .toggle-btn { flex:1; }
+#sky-btns-col { display:flex; flex-direction:column; gap:4px; width:clamp(28px,9vw,40px); flex-shrink:0; align-items:center; justify-content:space-around; }
+#sky-btns-col .toggle-btn { width:100%; height:auto; aspect-ratio:1; border-radius:50%; }
 .tick-row { height:8px; padding:0 2px; margin-bottom:6px; background:repeating-linear-gradient(to right,#888 0px,#888 1px,transparent 1px,transparent 7px); background-size:calc(100%/13) 100%; }
 #slider-container .tick-row { height:2px; margin-bottom:1px; }
 #speed-row { display:flex; flex-direction:column; }
