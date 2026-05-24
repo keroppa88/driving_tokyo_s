@@ -837,11 +837,13 @@ function handleLoopTransition(){
 //  TRAFFIC CARS
 function addOutline(obj, thickness=0.025){
   const outlineMat=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.BackSide,transparent:false,depthWrite:true});
-  obj.traverse(c=>{
-    if(!c.isMesh||!c.visible)return;
+  const targets=[];
+  obj.traverse(c=>{if(c.isMesh&&c.visible)targets.push(c);});
+  targets.forEach(c=>{
     const om=new THREE.Mesh(c.geometry,outlineMat);
     om.scale.setScalar(1+thickness);
     om.frustumCulled=false;
+    om.raycast=()=>{};
     c.add(om);
   });
 }
