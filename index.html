@@ -700,9 +700,10 @@ async function loadPlaylist() {
       const colorM=kw.match(/#[0-9a-fA-F]{6}/); const color=colorM?colorM[0]:null;
       const horizM=kw.match(/地平線(#[0-9a-fA-F]{6})/); const horiz=horizM?horizM[1]:null;
       const volM=kw.match(/音量([+-]\d+)%/); const volAdj=volM?1+parseInt(volM[1])/100:1;
+      const startM=kw.match(/開始(\d+)秒/); const startSec=startM?parseInt(startM[1]):0;
       const isYT=/youtube\.com|youtu\.be/.test(url);
       const vid=isYT?(url.match(/[?&]v=([^&]+)/)?.[1]||url):url.replace(/&amp;/g,'&');
-      return {id:vid,type:isYT?'yt':'radio',name,color,rain:/雨/.test(kw),star:/星/.test(kw),solid:/単色/.test(kw),horiz,volAdj};
+      return {id:vid,type:isYT?'yt':'radio',name,color,rain:/雨/.test(kw),star:/星/.test(kw),solid:/単色/.test(kw),horiz,volAdj,startSec};
     }).filter(Boolean);
     if(entries.length>0){playlist=entries;}
   } catch(e){console.warn('[playlist] load failed');}
@@ -740,8 +741,8 @@ function confirmTrack() {
   applyVolAdj();
   trackBarEl.textContent=`▶  ${trackLabel(e)}`;
   if(nowPlayingEl) nowPlayingEl.textContent=`▶  ${trackLabel(e)}`;
-  if(e.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(e.id); }
-  else { stopRadio(); if(ytReady&&ytPlayer) ytPlayer.loadVideoById(e.id); }
+  if(e.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(e.id,e.startSec); }
+  else { stopRadio(); if(ytReady&&ytPlayer) ytPlayer.loadVideoById({videoId:e.id,startSeconds:e.startSec??0}); }
 }
 
 function applyVolAdj() {
@@ -790,13 +791,13 @@ async function initYTPlayer() {
 
 // Radio
 const radioAudio=new Audio(); let radioHls=null, radioActive=false;
-function playRadio(url){
+function playRadio(url,startSec=0){
   if(radioHls){radioHls.destroy();radioHls=null;} radioAudio.pause();
   radioAudio.volume=Math.min(1,baseVol/100*currentVolAdj);
   if(typeof Hls!=='undefined'&&Hls.isSupported()&&/\.m3u8/i.test(url)){
     radioHls=new Hls();radioHls.loadSource(url);radioHls.attachMedia(radioAudio);
-    radioHls.on(Hls.Events.MANIFEST_PARSED,()=>radioAudio.play().catch(console.error));
-  } else {radioAudio.src=url;radioAudio.play().catch(console.error);}
+    radioHls.on(Hls.Events.MANIFEST_PARSED,()=>{if(startSec)radioAudio.currentTime=startSec;radioAudio.play().catch(console.error);});
+  } else {radioAudio.src=url;radioAudio.addEventListener('canplay',()=>{if(startSec)radioAudio.currentTime=startSec;},{once:true});radioAudio.play().catch(console.error);}
   radioActive=true;
 }
 function stopRadio(){if(radioHls){radioHls.destroy();radioHls=null;}radioAudio.pause();radioAudio.src='';radioActive=false;}
