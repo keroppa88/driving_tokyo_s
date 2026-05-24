@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta http-equiv="Cache-Control" content="no-store">
-<title>Driving in Tokyo</title>
+<title>Driving</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
 html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; background:#111; display:flex; justify-content:center; align-items:center; font-family:'Courier New',monospace; }
@@ -89,6 +89,13 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #start-btn:disabled { opacity:.4; cursor:default; }
 #start-btn:not(:disabled):active { background:rgba(100,180,100,.15); }
 
+#usa-btn {
+  display:block; margin-top:4px; padding:6px 18px; text-decoration:none;
+  background:transparent; color:#aaddaa; border:1px solid #446644;
+  font-family:inherit; font-size:clamp(18px,4.6vw,26px); cursor:pointer; letter-spacing:.05em;
+  border-radius:4px; text-align:center;
+}
+#usa-btn:active { background:rgba(100,180,100,.15); }
 #explain-btn {
   margin-top:6px; padding:4px 16px;
   background:transparent; color:#88bb88; border:1px solid #335533;
@@ -266,9 +273,10 @@ body.screen-only #screen-wrapper::before { display:none; }
     </div>
 
     <div id="start-overlay" style="display:none">
-      <h1>Driving in Tokyo</h1>
+      <h1>Driving</h1>
       <div id="audio-load-msg">読み込み中・・・</div>
-      <button id="start-btn" disabled>DRIVE START</button>
+      <button id="start-btn" disabled>Start in Tokyo</button>
+      <a id="usa-btn" href="https://keroppa88.github.io/driving_us_s/" target="_blank">Start in USA</a>
       <button id="explain-btn">説明</button>
     </div>
 
