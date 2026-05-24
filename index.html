@@ -203,7 +203,7 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 .toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; }
 .toggle-wrap.wide { flex:2; }
 .toggle-btn {
-  width:100%; height:clamp(21px,6.8vw,31px); border:none; border-radius:6px;
+  width:100%; height:clamp(28px,8.5vw,38px); border:none; border-radius:6px;
   background:#0d0d0d;
   box-shadow:inset 1px 1px 4px rgba(0,0,0,.95), 2px 2px 5px rgba(0,0,0,.55);
   cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -215,7 +215,7 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 .toggle-label { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; text-align:center; white-space:nowrap; }
 .sky-switch {
   position:relative; display:flex; align-items:center; overflow:hidden;
-  width:100%; height:clamp(21px,6.8vw,31px);
+  width:100%; height:clamp(28px,8.5vw,38px);
   background:#2d5a2d; border-radius:99px;
   box-shadow:inset 2px 2px 5px rgba(0,0,0,.6), inset -1px -1px 3px rgba(255,255,255,.1);
   cursor:pointer; transition:background .2s;
@@ -231,10 +231,10 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 .sky-switch.on .sky-knob { transform:translateX(calc(100% + 2px)); }
 .sky-sw-label {
   position:relative; z-index:2; flex:1; text-align:center;
-  font-size:clamp(7px,2vw,10px); font-weight:bold; color:#fff;
+  font-size:clamp(10px,2.8vw,14px); font-weight:bold; color:#fff;
   pointer-events:none; line-height:1;
 }
-#speed-row { display:flex; flex-direction:column; }
+#speed-row { display:flex; flex-direction:row; align-items:center; gap:5px; }
 
 #buttons-row { flex:1; display:flex; justify-content:space-around; align-items:center; padding:0 2px; }
 .action-btn-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -362,8 +362,10 @@ body.screen-only #screen-wrapper::before { display:none; }
           </div>
         </div>
         <div id="speed-row">
-          <input type="range" id="speed-slider" min="0" max="100" value="0">
-          <div class="slider-label">スピード</div>
+          <div class="slider-col">
+            <input type="range" id="speed-slider" min="0" max="100" value="0">
+          </div>
+          <span class="slider-side-label">速度</span>
         </div>
       </div>
     </div>
