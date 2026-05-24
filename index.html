@@ -160,23 +160,21 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #dpad-corner-bl { grid-area:3/1; background:transparent!important; box-shadow:none!important; }
 #dpad-corner-br { grid-area:3/3; background:transparent!important; box-shadow:none!important; }
 
-#sliders-area { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-start; gap:2px; }
-.slider-panel {
-  background:linear-gradient(160deg,#b8b49e,#a8a490); border-radius:12px; padding:10px 14px 8px;
-  box-shadow:inset 3px 3px 7px rgba(0,0,0,.28), inset -1px -1px 3px rgba(255,255,255,.32);
-}
+#sliders-area { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-start; gap:3px; }
+#color-sliders-row { display:flex; flex-direction:row; align-items:stretch; gap:5px; }
 #slider-container {
+  flex:1;
   background:linear-gradient(160deg,#a8a48e,#989080);
-  border-radius:12px; padding:2px 8px 1px;
+  border-radius:12px; padding:2px 8px 3px;
   box-shadow:inset 4px 4px 9px rgba(0,0,0,.38), inset -1px -1px 3px rgba(255,255,255,.22);
-  display:flex; flex-direction:column; gap:1px;
+  display:flex; flex-direction:column; gap:2px;
 }
-.slider-row { display:flex; flex-direction:row; align-items:center; gap:5px; }
-.slider-col { display:flex; flex-direction:column; flex:1; min-width:0; }
-.slider-side-label { font-size:clamp(11px,2.8vw,15px); color:#2a2818; font-weight:bold; white-space:nowrap; }
+.slider-col { display:flex; flex-direction:column; }
+#sky-btns-col { display:flex; flex-direction:column; gap:4px; }
+#sky-btns-col .toggle-btn { flex:1; }
 .tick-row { height:8px; padding:0 2px; margin-bottom:6px; background:repeating-linear-gradient(to right,#888 0px,#888 1px,transparent 1px,transparent 7px); background-size:calc(100%/13) 100%; }
 #slider-container .tick-row { height:2px; margin-bottom:1px; }
-#speed-row .tick-row { height:4px; margin-bottom:1px; }
+#speed-row { display:flex; flex-direction:column; }
 
 input[type=range] { width:100%; height:56px; -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
 input[type=range]::-webkit-slider-runnable-track { height:5px; background:linear-gradient(to right,#666,#888); border-radius:3px; box-shadow:inset 2px 2px 5px rgba(0,0,0,.6); }
@@ -199,9 +197,6 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 #slider-container .slider-label { font-size:clamp(12px,3vw,16px); margin-top:2px; color:#2a2818; }
 #speed-row .slider-label { font-size:clamp(9px,2.3vw,12px); margin-top:1px; color:#2a2818; }
 
-#toggle-row { display:flex; gap:4px; align-items:flex-start; padding:0; }
-.toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; }
-.toggle-wrap.wide { flex:2; }
 .toggle-btn {
   width:100%; height:clamp(28px,8.5vw,38px); border:none; border-radius:6px;
   background:#0d0d0d;
@@ -234,7 +229,6 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
   font-size:clamp(10px,2.8vw,14px); font-weight:bold; color:#fff;
   pointer-events:none; line-height:1;
 }
-#speed-row { display:flex; flex-direction:row; align-items:center; gap:5px; }
 
 #buttons-row { flex:1; display:flex; justify-content:space-around; align-items:center; padding:0 2px; }
 .action-btn-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -319,31 +313,25 @@ body.screen-only #screen-wrapper::before { display:none; }
       </div>
 
       <div id="sliders-area">
-        <div id="slider-container">
-          <div class="slider-row">
+        <div id="color-sliders-row">
+          <div id="slider-container">
             <div class="slider-col">
               <div class="tick-row"></div>
               <input type="range" id="sky-color-slider" min="0" max="100" value="59">
+              <div class="slider-label">色調</div>
             </div>
-            <span class="slider-side-label">色調</span>
-          </div>
-          <div class="slider-row">
             <div class="slider-col">
               <div class="tick-row"></div>
               <input type="range" id="sky-bright-slider" min="0" max="100" value="89">
+              <div class="slider-label">明暗</div>
             </div>
-            <span class="slider-side-label">明暗</span>
           </div>
-        </div>
-        <div id="toggle-row">
-          <div class="toggle-wrap">
+          <div id="sky-btns-col">
             <button class="toggle-btn" id="btn-star">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
               </svg>
             </button>
-          </div>
-          <div class="toggle-wrap">
             <button class="toggle-btn" id="btn-rain">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M23 12a11.05 11.05 0 0 0-22 0z"/>
@@ -353,19 +341,10 @@ body.screen-only #screen-wrapper::before { display:none; }
               </svg>
             </button>
           </div>
-          <div class="toggle-wrap wide">
-            <div id="sky-switch" class="sky-switch">
-              <span class="sky-sw-label">地平線</span>
-              <div id="sky-knob" class="sky-knob"></div>
-              <span class="sky-sw-label">空</span>
-            </div>
-          </div>
         </div>
         <div id="speed-row">
-          <div class="slider-col">
-            <input type="range" id="speed-slider" min="0" max="100" value="0">
-          </div>
-          <span class="slider-side-label">速度</span>
+          <input type="range" id="speed-slider" min="0" max="100" value="0">
+          <div class="slider-label">スピード</div>
         </div>
       </div>
     </div>
@@ -410,10 +389,10 @@ body.screen-only #screen-wrapper::before { display:none; }
         </button>
       </div>
       <div class="action-btn-wrap">
-        <span class="btn-label">全画面</span>
-        <button class="action-btn" id="btn-fs">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M3 16v3a2 2 0 002 2h3"/>
+        <span class="btn-label" id="lbl-color">色</span>
+        <button class="action-btn active" id="btn-fs">
+          <svg id="fs-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
           </svg>
         </button>
       </div>
@@ -1021,9 +1000,9 @@ wrapper.addEventListener('touchmove',e=>{
   pitch=Math.max(-1.3,Math.min(1.3,pitch));
 },{passive:true});
 wrapper.addEventListener('touchend',()=>{
-  if(fsState===2&&!touchIsDrag){
+  if(!touchIsDrag){
     const now=Date.now();
-    if(now-lastTapTime<2000){ exitScreenOnly(); lastTapTime=0; }
+    if(now-lastTapTime<400){ toggleFullscreen(); lastTapTime=0; }
     else lastTapTime=now;
   }
   touchActive=false; touchIsDrag=false;
@@ -1120,19 +1099,8 @@ btnSoundBtn.addEventListener('click',()=>{
   soundPanel.style.display=soundPanel.style.display==='flex'?'none':'flex';
 });
 
-const skySwitch  = document.getElementById('sky-switch');
-const btnRain    = document.getElementById('btn-rain');
-const btnStar    = document.getElementById('btn-star');
-// sky-switch: right=on=空(0), left=off=地平線(1)
-function updateSkySwitch() {
-  skySwitch.classList.toggle('on', skySliderMode === 0);
-}
-skySwitch.addEventListener('click', () => {
-  skySliderMode = skySliderMode === 0 ? 1 : 0;
-  updateSkySwitch();
-  syncSkySliders();
-});
-updateSkySwitch();
+const btnRain = document.getElementById('btn-rain');
+const btnStar = document.getElementById('btn-star');
 btnRain.addEventListener('click', () => {
   rainActive = !rainActive;
   btnRain.classList.toggle('active', rainActive);
@@ -1142,47 +1110,54 @@ btnStar.addEventListener('click', () => {
   btnStar.classList.toggle('active', starActive);
 });
 
+// btn-fs = 色モードボタン: 空(0)↔地平線(1)
+const fsIcon = document.getElementById('fs-icon');
+const CLOUD_PATH = '<path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>';
+const HORIZ_PATH = '<path d="M3 18h18M4 14l4-6 4 4 3-3 5 5"/>';
+function updateColorModeBtn(){
+  const isSky = skySliderMode===0;
+  fsIcon.innerHTML = isSky ? CLOUD_PATH : HORIZ_PATH;
+  fsIcon.setAttribute('fill', isSky ? 'currentColor' : 'none');
+  fsIcon.setAttribute('stroke', isSky ? 'none' : 'currentColor');
+  fsIcon.setAttribute('stroke-width', isSky ? '0' : '2');
+  btnFs.classList.add('active');
+}
+btnFs.addEventListener('click',()=>{
+  skySliderMode = skySliderMode===0 ? 1 : 0;
+  updateColorModeBtn();
+  syncSkySliders();
+});
+updateColorModeBtn();
+
+// 全画面: ダブルタップで toggle
 let fsState=0;
-function updateFsBtn(){ btnFs.classList.add('active'); }
+function toggleFullscreen(){
+  if(fsState===0){
+    document.body.classList.add('screen-only');
+    (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen)?.call(document.documentElement).catch(()=>{});
+    fsState=2;
+    try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(_){}
+    setTimeout(onResize,50);
+  } else {
+    exitScreenOnly();
+  }
+}
 function exitScreenOnly(){
-  if(fsState!==2) return;
+  if(fsState===0) return;
   document.body.classList.remove('screen-only');
   fsState=0;
   try{ screen.orientation.unlock(); }catch(_){}
   if(document.fullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen)?.call(document);}
   setTimeout(onResize,50);
-  updateFsBtn();
 }
-btnFs.addEventListener('click',()=>{
-  if(fsState===0){
-    (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen)?.call(document.documentElement);
-    fsState=1;
-  } else if(fsState===1){
-    document.body.classList.add('screen-only');
-    fsState=2;
-    try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(_){}
-    setTimeout(onResize,50);
-  }
-  updateFsBtn();
-});
 function onFsChange(){
   if(!document.fullscreenElement){
-    if(fsState===2){ document.body.classList.remove('screen-only'); try{screen.orientation.unlock();}catch(_){} }
-    fsState=0;
-    setTimeout(onResize,50);
-    updateFsBtn();
+    if(fsState===2) document.body.classList.remove('screen-only');
+    fsState=0; setTimeout(onResize,50);
   }
 }
 document.addEventListener('fullscreenchange',onFsChange);
-document.addEventListener('webkitfullscreenchange',()=>{
-  if(!document.fullscreenElement){
-    if(fsState===2){ document.body.classList.remove('screen-only'); try{screen.orientation.unlock();}catch(_){} }
-    fsState=0;
-    setTimeout(onResize,50);
-  }
-  updateFsBtn();
-});
-updateFsBtn();
+document.addEventListener('webkitfullscreenchange',onFsChange);
 
 // 説明ページ
 document.getElementById('explain-btn').addEventListener('click',()=>{
