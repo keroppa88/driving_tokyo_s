@@ -741,7 +741,7 @@ function confirmTrack() {
   applyVolAdj();
   trackBarEl.textContent=`▶  ${trackLabel(e)}`;
   if(nowPlayingEl) nowPlayingEl.textContent=`▶  ${trackLabel(e)}`;
-  if(e.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(e.id,e.startSec); }
+  if(e.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(e.id); }
   else { stopRadio(); if(ytReady&&ytPlayer) ytPlayer.loadVideoById({videoId:e.id,startSeconds:e.startSec??0}); }
 }
 
@@ -791,13 +791,13 @@ async function initYTPlayer() {
 
 // Radio
 const radioAudio=new Audio(); let radioHls=null, radioActive=false;
-function playRadio(url,startSec=0){
+function playRadio(url){
   if(radioHls){radioHls.destroy();radioHls=null;} radioAudio.pause();
   radioAudio.volume=Math.min(1,baseVol/100*currentVolAdj);
   if(typeof Hls!=='undefined'&&Hls.isSupported()&&/\.m3u8/i.test(url)){
     radioHls=new Hls();radioHls.loadSource(url);radioHls.attachMedia(radioAudio);
-    radioHls.on(Hls.Events.MANIFEST_PARSED,()=>{if(startSec)radioAudio.currentTime=startSec;radioAudio.play().catch(console.error);});
-  } else {radioAudio.src=url;radioAudio.addEventListener('canplay',()=>{if(startSec)radioAudio.currentTime=startSec;},{once:true});radioAudio.play().catch(console.error);}
+    radioHls.on(Hls.Events.MANIFEST_PARSED,()=>radioAudio.play().catch(console.error));
+  } else {radioAudio.src=url;radioAudio.play().catch(console.error);}
   radioActive=true;
 }
 function stopRadio(){if(radioHls){radioHls.destroy();radioHls=null;}radioAudio.pause();radioAudio.src='';radioActive=false;}
