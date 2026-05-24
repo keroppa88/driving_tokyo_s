@@ -73,9 +73,8 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #start-overlay  { background:rgba(8,15,8,.92); color:#aadaaa; justify-content:space-between; }
 #start-overlay h1 { font-size:clamp(22px,6vw,32px); color:#c8e8c8; letter-spacing:.05em; text-align:center; margin-bottom:2px; }
 #overlay-top { display:flex; flex-direction:column; align-items:center; gap:6px; }
-#overlay-main { display:flex; flex-direction:column; align-items:flex-start; align-self:center; gap:8px; }
-#sub-btns { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
-#sub-btns #explain-btn { align-self:center; }
+#overlay-main { display:flex; flex-direction:column; align-items:center; gap:10px; }
+#overlay-bottom { display:flex; justify-content:flex-end; width:100%; }
 #start-overlay .ctrl-hint { font-size:clamp(6px,1.6vw,8.5px); color:#669966; text-align:center; line-height:1.6; }
 
 .vol-row-sm { display:flex; align-items:center; gap:6px; width:100%; }
@@ -94,14 +93,14 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 #start-btn:not(:disabled):active { background:rgba(100,180,100,.15); }
 
 #usa-btn {
-  display:block; padding:4px 14px; text-decoration:none;
-  background:transparent; color:#aaddaa; border:1px solid #446644;
-  font-family:inherit; font-size:clamp(13px,3.2vw,18px); cursor:pointer; letter-spacing:.05em;
-  border-radius:4px; text-align:left;
+  display:block; padding:3px 10px; text-decoration:none;
+  background:transparent; color:#88bb88; border:1px solid #335533;
+  font-family:inherit; font-size:clamp(9px,2.3vw,13px); cursor:pointer; letter-spacing:.03em;
+  border-radius:4px;
 }
 #usa-btn:active { background:rgba(100,180,100,.15); }
 #explain-btn {
-  margin-top:4px; padding:4px 14px;
+  padding:4px 14px;
   background:transparent; color:#88bb88; border:1px solid #335533;
   font-family:inherit; font-size:clamp(10px,2.5vw,14px); cursor:pointer; letter-spacing:.05em;
   border-radius:4px;
@@ -282,11 +281,11 @@ body.screen-only #screen-wrapper::before { display:none; }
         <div id="audio-load-msg">読み込み中・・・</div>
       </div>
       <div id="overlay-main">
-        <button id="start-btn" disabled>Start in Tokyo</button>
-        <div id="sub-btns">
-          <a id="usa-btn" href="https://keroppa88.github.io/driving_us_s/" target="_blank">Driving in The USA</a>
-          <button id="explain-btn">説明</button>
-        </div>
+        <button id="start-btn" disabled>DRIVE START</button>
+        <button id="explain-btn">説明</button>
+      </div>
+      <div id="overlay-bottom">
+        <a id="usa-btn" href="https://keroppa88.github.io/driving_us_s/" target="_blank">Driving in The USA</a>
       </div>
     </div>
 
