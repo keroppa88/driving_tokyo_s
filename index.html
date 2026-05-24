@@ -1188,6 +1188,7 @@ function onFsChange(){
 }
 document.addEventListener('fullscreenchange',onFsChange);
 document.addEventListener('webkitfullscreenchange',onFsChange);
+wrapper.addEventListener('dblclick',()=>{ if(matchMedia('(pointer:fine)').matches) toggleFullscreen(); });
 
 // 説明ページ
 document.getElementById('explain-btn').addEventListener('click',()=>{
