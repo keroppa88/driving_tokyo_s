@@ -312,7 +312,6 @@ body.screen-only #screen-wrapper::before { display:none; }
     <div id="hud">
       <span><span id="hud-speed">0</span>km/h</span>
       <span id="hud-auto" style="display:none;color:#6aba6a;">AUTO</span>
-      <span id="hud-coords" style="opacity:.7"></span>
     </div>
     <div id="track-bar"></div>
     <div id="connecting-bar"></div>
@@ -469,7 +468,6 @@ const trackBarEl   = document.getElementById('track-bar');
 const hudEl        = document.getElementById('hud');
 const hudSpeedEl   = document.getElementById('hud-speed');
 const hudAutoEl    = document.getElementById('hud-auto');
-const hudCoordsEl  = document.getElementById('hud-coords');
 const soundPanel   = document.getElementById('sound-panel');
 
 // ─────────────────────────────────────────────
@@ -683,8 +681,9 @@ function updateCruiseBgm() { playBgm(cruiseSpeed > 14 ? 'freeway2' : 'freeway1')
 let ytPlayer = null, ytReady = false;
 let currentVolAdj = 1.0, baseVol = 70;
 let seekOnPlay = null;
-let playlist = [{ id:'Uw5OLnN7UvM', type:'yt', name:'Bill Withers,Just The Two Of Us', color:null, rain:false, star:false, volAdj:1 }];
+let playlist = [{ id:'Qm85EFFCjLA', type:'yt', name:'White Noise', color:null, rain:false, star:false, volAdj:1 }];
 let playlistIdx = 0, playingIdx = 0, isBrowsing = false, trackLoading = false, selectDebounce = null;
+let trackWasConfirmed = false;
 
 const nowPlayingEl  = null;
 const connectingEl  = connectBar;
@@ -743,6 +742,7 @@ function confirmTrack() {
   applyVolAdj();
   trackBarEl.textContent=`▶  ${trackLabel(e)}`;
   if(nowPlayingEl) nowPlayingEl.textContent=`▶  ${trackLabel(e)}`;
+  trackWasConfirmed = true;
   if(e.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(e.id); }
   else { stopRadio(); if(ytReady&&ytPlayer){ seekOnPlay=e.startSec>0?e.startSec:null; ytPlayer.loadVideoById({videoId:e.id,startSeconds:e.startSec??0}); } }
 }
@@ -775,7 +775,7 @@ async function initYTPlayer() {
   try {
     await loadYTApi();
     ytPlayer=await new Promise((res,rej)=>{
-      new YT.Player('yt-container',{width:400,height:300,videoId:'Uw5OLnN7UvM',
+      new YT.Player('yt-container',{width:400,height:300,videoId:'Qm85EFFCjLA',
         playerVars:{autoplay:0,controls:0,fs:0},
         events:{
           onReady:e=>{ytReady=true;res(e.target);},
@@ -1116,7 +1116,7 @@ btnPlay.addEventListener('click',()=>{
   }
   if(isBrowsing){ confirmTrack(); return; }
   if(radioActive){ radioAudio.play().catch(console.error); return; }
-  if(!ytReady||!ytPlayer) return;
+  if(!ytReady||!ytPlayer||!trackWasConfirmed) return;
   ytPlayer.playVideo();
 });
 
@@ -1319,10 +1319,7 @@ function animate(){
 
   if(gameActive){
     hudSpeedEl.textContent=Math.round(cruiseSpeed/MAX_CRUISE*180);
-    const cp=camera.position;
-    const activeCars=trafficCars.filter(tc=>tc.active&&tc.mesh);
-    const carStr=activeCars.map(tc=>{const p=tc.mesh.position;return `car(${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)})`;}).join(' ');
-    hudCoordsEl.textContent=`cam(${cp.x.toFixed(1)},${cp.y.toFixed(1)},${cp.z.toFixed(1)})${carStr?' '+carStr:''}`;
+
   }
 
   renderer.render(scene,camera);
