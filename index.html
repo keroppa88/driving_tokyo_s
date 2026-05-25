@@ -1137,6 +1137,44 @@ btnHud.addEventListener('click',()=>{
   applyDisplayMode();
 });
 
+// ─────────────────────────────────────────────
+//  KEYBOARD CONTROLS (PC)
+// ─────────────────────────────────────────────
+(function(){
+  const kbHeld={}, kbT={};
+  function kbPress(dir){
+    if(kbHeld[dir]) return;
+    kbHeld[dir]=true;
+    if(dir==='up'){
+      selectTrack(-1);
+      kbT.upT=setTimeout(()=>{kbT.upI=setInterval(()=>selectTrack(-5),200);},500);
+    } else {
+      selectTrack(+1);
+      kbT.dnT=setTimeout(()=>{kbT.dnI=setInterval(()=>selectTrack(+5),200);},500);
+    }
+  }
+  function kbRelease(dir){
+    kbHeld[dir]=false;
+    if(dir==='up'){clearTimeout(kbT.upT);clearInterval(kbT.upI);kbT.upT=kbT.upI=null;}
+    else          {clearTimeout(kbT.dnT);clearInterval(kbT.dnI);kbT.dnT=kbT.dnI=null;}
+  }
+  document.addEventListener('keydown',e=>{
+    if(e.repeat) return;
+    switch(e.key){
+      case 'ArrowUp':    e.preventDefault(); kbPress('up');   break;
+      case 'ArrowDown':  e.preventDefault(); kbPress('dn');   break;
+      case 'ArrowLeft':  e.preventDefault(); seekYT(-10);     break;
+      case 'ArrowRight': e.preventDefault(); seekYT(+10);     break;
+      case 'y': case 'Y': btnPlay.click();  break;
+      case 'a': case 'A': btnHud.click();   break;
+    }
+  });
+  document.addEventListener('keyup',e=>{
+    if(e.key==='ArrowUp')   kbRelease('up');
+    if(e.key==='ArrowDown') kbRelease('dn');
+  });
+})();
+
 btnAuto.addEventListener('click',()=>{
   autoPilot=!autoPilot;
   btnAuto.classList.toggle('active',autoPilot);
