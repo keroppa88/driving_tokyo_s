@@ -469,6 +469,7 @@ const trackBarEl   = document.getElementById('track-bar');
 const hudEl        = document.getElementById('hud');
 const hudSpeedEl   = document.getElementById('hud-speed');
 const hudAutoEl    = document.getElementById('hud-auto');
+const hudCoordsEl  = document.getElementById('hud-coords');
 const soundPanel   = document.getElementById('sound-panel');
 
 // ─────────────────────────────────────────────
@@ -1311,6 +1312,10 @@ function animate(){
 
   if(gameActive){
     hudSpeedEl.textContent=Math.round(cruiseSpeed/MAX_CRUISE*180);
+    const cp=camera.position;
+    const activeCars=trafficCars.filter(tc=>tc.active&&tc.mesh);
+    const carStr=activeCars.map(tc=>{const p=tc.mesh.position;return `car(${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)})`;}).join(' ');
+    hudCoordsEl.textContent=`cam(${cp.x.toFixed(1)},${cp.y.toFixed(1)},${cp.z.toFixed(1)})${carStr?' '+carStr:''}`;
   }
 
   renderer.render(scene,camera);
