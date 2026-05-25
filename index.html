@@ -484,11 +484,11 @@ const AP_TARGET_X  = 3.6;
 const ONCOMING_X   = 4.8;
 const SAMEDIR_X    = 2.4;
 const CAR_SPEED    = MAX_CRUISE / 2;
-const CYCLE_DURATION_MS   = 35 * 60 * 1000;
-const SPAWN_WINDOW_MS     = 30000;
-const SAMEDIR_LIFETIME_MS = 180000;
+const CYCLE_DURATION_MS    = 30 * 60 * 1000;
+const SPAWN_WINDOW_MS      = 30000;
 const CAR_SPAWN_OFFSET_ABS = 100;
 const SAMEDIR_EXIT_DIST    = CAR_SPAWN_OFFSET_ABS + LOOP_LENGTH / 2;
+const KMH_TO_SPEED         = MAX_CRUISE / 180;
 
 // ─────────────────────────────────────────────
 //  RENDERER
@@ -855,16 +855,19 @@ function handleLoopTransition(){
 //  TRAFFIC CARS
 // ─────────────────────────────────────────────
 const trafficCars=[
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:30000,lifetime:30000,oncoming:true},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:90000,lifetime:30000,oncoming:true},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:240000,lifetime:SAMEDIR_LIFETIME_MS,oncoming:false},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:600000,lifetime:SAMEDIR_LIFETIME_MS,oncoming:false},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:1200000,lifetime:30000,oncoming:true},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:1500000,lifetime:30000,oncoming:true},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:1680000,lifetime:SAMEDIR_LIFETIME_MS,oncoming:false},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0,spawnAt:1800000,lifetime:SAMEDIR_LIFETIME_MS,oncoming:false},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 1*60000, lifetime: 3*60000, oncoming:false, speed: 70*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 3*60000, lifetime: 3*60000, oncoming:false, speed: 90*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 6*60000, lifetime: 3*60000, oncoming:false, speed:100*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 9*60000, lifetime: 3*60000, oncoming:false, speed: 80*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:12*60000, lifetime: 3*60000, oncoming:false, speed:120*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:16*60000, lifetime: 3*60000, oncoming:false, speed:110*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:19*60000, lifetime: 3*60000, oncoming:false, speed: 80*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:22*60000, lifetime: 1*60000, oncoming:false, speed: 80*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:23*60000, lifetime: 1*60000, oncoming:false, speed: 90*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:24*60000, lifetime: 3*60000, oncoming:false, speed: 70*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:26*60000, lifetime: 2*60000, oncoming:false, speed: 70*KMH_TO_SPEED},
 ];
-['car01.glb','car02.glb','car03.glb','car04.glb','car01.glb','car02.glb','car03.glb','car04.glb'].forEach((f,i)=>{
+['car01.glb','car02.glb','car03.glb','car04.glb','car03.glb','car02.glb','car01.glb','car02.glb','car04.glb','car01.glb','car01.glb'].forEach((f,i)=>{
   new GLTFLoader().load(f+'?v='+Date.now(),gltf=>{
     const m=gltf.scene;
     m.traverse(c=>{if(!c.isMesh)return;c.frustumCulled=false;
@@ -897,12 +900,12 @@ function updateAllTrafficCars(dt){
     if(!tc.active)continue;
     if(ce-tc.spawnElapsed>=tc.lifetime){tc.mesh.visible=false;tc.active=false;tc.done=true;continue;}
     if(tc.oncoming){
-      tc.mesh.position.z+=CAR_SPEED*dt;
+      tc.mesh.position.z+=tc.speed*dt;
       if(tc.mesh.position.z>=PLAY_Z_MAX){tc.mesh.visible=false;tc.active=false;tc.done=true;}
     } else {
-      tc.mesh.position.z-=CAR_SPEED*dt;
+      tc.mesh.position.z-=tc.speed*dt;
       if(tc.mesh.position.z<PLAY_Z_MIN)tc.mesh.position.z+=LOOP_LENGTH;
-      tc.relDist+=playerZDeltaFrame-CAR_SPEED*dt;
+      tc.relDist+=playerZDeltaFrame-tc.speed*dt;
       if(tc.relDist>=SAMEDIR_EXIT_DIST){tc.mesh.visible=false;tc.active=false;tc.done=true;}
     }
   }
