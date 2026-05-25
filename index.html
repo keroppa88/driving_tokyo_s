@@ -857,10 +857,10 @@ function handleLoopTransition(){
 //  TRAFFIC CARS
 // ─────────────────────────────────────────────
 const trafficCars=[
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:10000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:20000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:30000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:40000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:10000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.5},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:20000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.8},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:30000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.7},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:40000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.1},
 ];
 ['car01.glb','car02.glb','car03.glb','car04.glb'].forEach((f,i)=>{
   new GLTFLoader().load(f+'?v='+Date.now(),gltf=>{
@@ -885,7 +885,7 @@ function updateAllTrafficCars(dt){
     if(!tc.active&&!tc.done&&ce>=tc.spawnAt){
       if(ce-tc.spawnAt>SPAWN_WINDOW_MS){tc.done=true;}
       else{
-        const sx=tc.oncoming?ONCOMING_X:SAMEDIR_X;
+        const sx=tc.oncoming?ONCOMING_X:(tc.xPos??SAMEDIR_X);
         let sz=camera.position.z-100;
         if(tc.oncoming)sz=Math.max(sz,PLAY_Z_MIN); else if(sz<PLAY_Z_MIN)sz+=LOOP_LENGTH;
         tc.mesh.position.set(sx,0,sz);tc.mesh.rotation.y=tc.oncoming?Math.PI:0;
