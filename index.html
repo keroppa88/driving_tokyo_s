@@ -681,7 +681,7 @@ function updateCruiseBgm() { playBgm(cruiseSpeed > 14 ? 'freeway2' : 'freeway1')
 let ytPlayer = null, ytReady = false;
 let currentVolAdj = 1.0, baseVol = 70;
 let seekOnPlay = null;
-let playlist = [{ id:'Qm85EFFCjLA', type:'yt', name:'White Noise', color:null, rain:false, star:false, volAdj:1 }];
+let playlist = [{ id:'3Fy8XYr6J6s', type:'yt', name:'Silence', color:null, rain:false, star:false, volAdj:1 }];
 let playlistIdx = 0, playingIdx = 0, isBrowsing = false, trackLoading = false, selectDebounce = null;
 let trackWasConfirmed = false;
 
@@ -775,7 +775,7 @@ async function initYTPlayer() {
   try {
     await loadYTApi();
     ytPlayer=await new Promise((res,rej)=>{
-      new YT.Player('yt-container',{width:400,height:300,videoId:'Qm85EFFCjLA',
+      new YT.Player('yt-container',{width:400,height:300,videoId:'3Fy8XYr6J6s',
         playerVars:{autoplay:0,controls:0,fs:0},
         events:{
           onReady:e=>{ytReady=true;res(e.target);},
