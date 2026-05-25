@@ -857,12 +857,19 @@ function handleLoopTransition(){
 //  TRAFFIC CARS
 // ─────────────────────────────────────────────
 const trafficCars=[
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:10000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.5},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:20000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.8},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:30000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.7},
-  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:40000, lifetime:10000, oncoming:false, speed:10*KMH_TO_SPEED, xPos:SAMEDIR_X-0.1},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 1*60000, lifetime: 3*60000, oncoming:false, speed: 70*KMH_TO_SPEED, xPos:SAMEDIR_X-0.5},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 3*60000, lifetime: 3*60000, oncoming:false, speed: 90*KMH_TO_SPEED, xPos:SAMEDIR_X-0.8},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 6*60000, lifetime: 3*60000, oncoming:false, speed:100*KMH_TO_SPEED, xPos:SAMEDIR_X-0.7},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt: 9*60000, lifetime: 3*60000, oncoming:false, speed: 80*KMH_TO_SPEED, xPos:SAMEDIR_X-0.1},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:12*60000, lifetime: 3*60000, oncoming:false, speed:120*KMH_TO_SPEED, xPos:SAMEDIR_X-0.7},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:16*60000, lifetime: 3*60000, oncoming:false, speed:110*KMH_TO_SPEED, xPos:SAMEDIR_X-0.8},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:19*60000, lifetime: 3*60000, oncoming:false, speed: 80*KMH_TO_SPEED, xPos:SAMEDIR_X-0.5},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:22*60000, lifetime: 1*60000, oncoming:false, speed: 80*KMH_TO_SPEED, xPos:SAMEDIR_X-0.8},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:23*60000, lifetime: 1*60000, oncoming:false, speed: 90*KMH_TO_SPEED, xPos:SAMEDIR_X-0.1},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:24*60000, lifetime: 3*60000, oncoming:false, speed: 70*KMH_TO_SPEED, xPos:SAMEDIR_X-0.5},
+  {mesh:null,active:false,done:false,spawnElapsed:0,relDist:0, spawnAt:26*60000, lifetime: 2*60000, oncoming:false, speed: 70*KMH_TO_SPEED, xPos:SAMEDIR_X-0.5},
 ];
-['car01.glb','car02.glb','car03.glb','car04.glb'].forEach((f,i)=>{
+['car01.glb','car02.glb','car03.glb','car04.glb','car03.glb','car02.glb','car01.glb','car02.glb','car04.glb','car01.glb','car01.glb'].forEach((f,i)=>{
   new GLTFLoader().load(f+'?v='+Date.now(),gltf=>{
     const m=gltf.scene;
     m.traverse(c=>{if(!c.isMesh)return;c.frustumCulled=false;
