@@ -681,6 +681,7 @@ function updateCruiseBgm() { playBgm(cruiseSpeed > 14 ? 'freeway2' : 'freeway1')
 // ─────────────────────────────────────────────
 let ytPlayer = null, ytReady = false;
 let currentVolAdj = 1.0, baseVol = 70;
+let seekOnPlay = null;
 let playlist = [{ id:'Uw5OLnN7UvM', type:'yt', name:'Bill Withers,Just The Two Of Us', color:null, rain:false, star:false, volAdj:1 }];
 let playlistIdx = 0, playingIdx = 0, isBrowsing = false, trackLoading = false, selectDebounce = null;
 
@@ -742,7 +743,7 @@ function confirmTrack() {
   trackBarEl.textContent=`▶  ${trackLabel(e)}`;
   if(nowPlayingEl) nowPlayingEl.textContent=`▶  ${trackLabel(e)}`;
   if(e.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(e.id); }
-  else { stopRadio(); if(ytReady&&ytPlayer) ytPlayer.loadVideoById({videoId:e.id,startSeconds:e.startSec??0}); }
+  else { stopRadio(); if(ytReady&&ytPlayer){ seekOnPlay=e.startSec>0?e.startSec:null; ytPlayer.loadVideoById({videoId:e.id,startSeconds:e.startSec??0}); } }
 }
 
 function applyVolAdj() {
@@ -778,7 +779,7 @@ async function initYTPlayer() {
         events:{
           onReady:e=>{ytReady=true;res(e.target);},
           onStateChange:e=>{
-            if(e.data===1){trackLoading=false;const lbl=trackLabel(playlist[playingIdx]);connectingEl.style.display='block';connectingEl.textContent=lbl;trackBarEl.textContent=`▶  ${lbl}`;isBrowsing=false;applyVolAdj();setMusicBtn(true);}
+            if(e.data===1){trackLoading=false;if(seekOnPlay!==null){ytPlayer.seekTo(seekOnPlay,true);seekOnPlay=null;}const lbl=trackLabel(playlist[playingIdx]);connectingEl.style.display='block';connectingEl.textContent=lbl;trackBarEl.textContent=`▶  ${lbl}`;isBrowsing=false;applyVolAdj();setMusicBtn(true);}
             if(e.data===2){trackLoading=false;setMusicBtn(false);}
             if(e.data===0){trackLoading=false;currentVolAdj=1;ytVolSlider.value=baseVol;document.getElementById('yt-vol2-lbl').textContent=baseVol+'%';ytPlayer.setVolume(baseVol);setMusicBtn(false);clearNowPlaying();}
           },
