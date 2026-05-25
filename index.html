@@ -1006,8 +1006,15 @@ const skyColorSlider = document.getElementById('sky-color-slider');
 const skyBrightSlider = document.getElementById('sky-bright-slider');
 skyColorSlider.addEventListener('input', e => {
   const v = e.target.value / 100;
-  if (skySliderMode === 0) { skyH = v; }
-  else { horizH = v; }
+  if (skySliderMode === 0) {
+    skyH = v;
+    if (skyS === 0) skyS = 0.6;
+    if (skyL === 0) skyL = 0.1;
+  } else {
+    horizH = v;
+    if (horizS === 0) horizS = 0.6;
+    if (horizL === 0) horizL = 0.1;
+  }
   applySkySliders();
 });
 skyBrightSlider.addEventListener('input', e => {
