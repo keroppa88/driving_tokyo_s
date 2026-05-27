@@ -690,6 +690,7 @@ let playlistBrowse = false;   // user is browsing within a playlist
 let currentPL = null;         // active playlist entry { name, tracks[] }
 let plTrackIdx = 0;           // current track index within currentPL
 let nowPlayingLabel = '';      // label used in trackBar / connectBar
+let plExitDir = null, plExitTime = 0; // double-press exit detection
 
 const nowPlayingEl  = null;
 const connectingEl  = connectBar;
@@ -746,16 +747,24 @@ function selectTrack(delta) {
   if(displayMode>0){ displayMode=0; applyDisplayMode(); }
 
   if(playlistBrowse && currentPL) {
-    const newIdx = plTrackIdx + delta;
-    if(newIdx >= 0 && newIdx < currentPL.tracks.length) {
-      plTrackIdx = newIdx;
+    const isHold = Math.abs(delta) > 1;
+    const dir = delta < 0 ? 'up' : 'dn';
+    const now = Date.now();
+    if(!isHold && plExitDir === dir && now - plExitTime < 400) {
+      // 同方向2回連続 → プレイリスト離脱
+      playlistBrowse = false;
+      plExitDir = null;
+      // fall through to main list navigation
+    } else {
+      if(!isHold){ plExitDir = dir; plExitTime = now; }
+      const n = currentPL.tracks.length;
+      plTrackIdx = ((plTrackIdx + delta) % n + n) % n;
       isBrowsing = true;
       connectingEl.style.display = 'block';
       connectingEl.textContent = `${currentPL.name} ▷ ${trackLabel(currentPL.tracks[plTrackIdx])}`;
       clearTimeout(selectDebounce);
       return;
     }
-    playlistBrowse = false; // out of bounds → fall through to main list
   }
 
   if(!playlist.length) return;
