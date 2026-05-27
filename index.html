@@ -716,10 +716,10 @@ async function loadPlaylist() {
     const lines = text.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('#'));
     const entries = [];
     for(const l of lines) {
-      const plM = l.match(/^(プレイリスト「[^」]+」\.txt)$/);
+      const plM = l.match(/^(プレイリスト「[^」]+」)(\.txt)?$/);
       if(plM) {
-        const filename = plM[1];
-        const plName = filename.replace(/\.txt$/,'');
+        const plName = plM[1];
+        const filename = plName + '.txt';
         try {
           const plText = await (await fetch(filename)).text();
           const tracks = plText.split('\n').map(x=>x.trim()).filter(x=>x&&!x.startsWith('#'))
