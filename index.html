@@ -63,18 +63,8 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
   white-space:normal; word-break:break-word;
   text-align:center; line-height:1.2;
 }
-#pl-hint {
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  z-index:15; pointer-events:none;
-  border:1px solid rgba(160,210,160,.6);
-  padding:6px 14px;
-  font-size:clamp(11px,3vw,15px);
-  color:rgba(185,215,185,.9); text-shadow:0 0 5px rgba(0,200,0,.3);
-  white-space:nowrap; text-align:center;
-  background:rgba(0,0,0,.35);
-  opacity:0; transition:opacity .4s;
-}
-#pl-hint.show { opacity:1; }
+#dpad-center.pl-active { background:#2a0000; }
+#dpad-center.pl-active .dpad-arrow { color:#cc2222; text-shadow:0 0 6px rgba(200,0,0,.8); }
 
 #loading-screen, #start-overlay, #sound-panel {
   position:absolute; inset:0; z-index:20; display:flex; flex-direction:column;
@@ -328,7 +318,6 @@ body.screen-only #screen-wrapper::before { display:none; }
     </div>
     <div id="track-bar"></div>
     <div id="connecting-bar"></div>
-    <div id="pl-hint">上下どちらかを2回連続押しでプレイリスト離脱</div>
   </div>
 
   <div id="controls">
@@ -339,7 +328,7 @@ body.screen-only #screen-wrapper::before { display:none; }
           <div id="dpad-up" class="dpad-btn" data-dir="up"><span class="dpad-arrow">▲</span></div>
           <div id="dpad-corner-tr"></div>
           <div id="dpad-left" class="dpad-btn" data-dir="left"><span class="dpad-arrow">◀</span></div>
-          <div id="dpad-center" class="dpad-btn" data-dir="center"><span class="dpad-arrow" style="color:#555">●</span></div>
+          <div id="dpad-center" class="dpad-btn" data-dir="center"><span class="dpad-arrow" id="dpad-center-dot" style="color:#555">●</span></div>
           <div id="dpad-right" class="dpad-btn" data-dir="right"><span class="dpad-arrow">▶</span></div>
           <div id="dpad-corner-bl"></div>
           <div id="dpad-down" class="dpad-btn" data-dir="down"><span class="dpad-arrow">▼</span></div>
@@ -703,15 +692,11 @@ let playlistBrowse = false;   // user is browsing within a playlist
 let currentPL = null;         // active playlist entry { name, tracks[] }
 let plTrackIdx = 0;           // current track index within currentPL
 let nowPlayingLabel = '';      // label used in trackBar / connectBar
-let plExitDir = null, plExitTime = 0; // double-press exit detection
 
 const nowPlayingEl  = null;
-const plHintEl = document.getElementById('pl-hint');
-let plHintTimer = null;
-function showPlHint() {
-  clearTimeout(plHintTimer);
-  plHintEl.classList.add('show');
-  plHintTimer = setTimeout(()=>plHintEl.classList.remove('show'), 3000);
+const dpadCenterEl = document.getElementById('dpad-center');
+function setPlActive(on) {
+  dpadCenterEl.classList.toggle('pl-active', on);
 }
 const connectingEl  = connectBar;
 
@@ -767,24 +752,13 @@ function selectTrack(delta) {
   if(displayMode>0){ displayMode=0; applyDisplayMode(); }
 
   if(playlistBrowse && currentPL) {
-    const isHold = Math.abs(delta) > 1;
-    const dir = delta < 0 ? 'up' : 'dn';
-    const now = Date.now();
-    if(!isHold && plExitDir === dir && now - plExitTime < 400) {
-      // 同方向2回連続 → プレイリスト離脱
-      playlistBrowse = false;
-      plExitDir = null;
-      // fall through to main list navigation
-    } else {
-      if(!isHold){ plExitDir = dir; plExitTime = now; }
-      const n = currentPL.tracks.length;
-      plTrackIdx = ((plTrackIdx + delta) % n + n) % n;
-      isBrowsing = true;
-      connectingEl.style.display = 'block';
-      connectingEl.textContent = `${currentPL.name} ▷ ${trackLabel(currentPL.tracks[plTrackIdx])}`;
-      clearTimeout(selectDebounce);
-      return;
-    }
+    const n = currentPL.tracks.length;
+    plTrackIdx = ((plTrackIdx + delta) % n + n) % n;
+    isBrowsing = true;
+    connectingEl.style.display = 'block';
+    connectingEl.textContent = `${currentPL.name} ▷ ${trackLabel(currentPL.tracks[plTrackIdx])}`;
+    clearTimeout(selectDebounce);
+    return;
   }
 
   if(!playlist.length) return;
@@ -827,13 +801,13 @@ function confirmTrack() {
   if(e.type==='playlist') {
     playlistActive=true; playlistBrowse=true;
     currentPL=e; plTrackIdx=0;
-    showPlHint();
+    setPlActive(true);
     const track=e.tracks[0];
     playTrack(track, `${e.name} ▷ ${trackLabel(track)}`);
     return;
   }
 
-  playlistActive=false; playlistBrowse=false; currentPL=null;
+  playlistActive=false; playlistBrowse=false; currentPL=null; setPlActive(false);
   playingIdx=playlistIdx;
   playTrack(e, trackLabel(e));
 }
@@ -896,7 +870,7 @@ async function initYTPlayer() {
                   seekOnPlay=next.startSec>0?next.startSec:null;
                   ytPlayer.loadVideoById({videoId:next.id,startSeconds:next.startSec??0});
                 } else {
-                  playlistActive=false; playlistBrowse=false; currentPL=null;
+                  playlistActive=false; playlistBrowse=false; currentPL=null; setPlActive(false);
                   currentVolAdj=1;ytVolSlider.value=baseVol;document.getElementById('yt-vol2-lbl').textContent=baseVol+'%';ytPlayer.setVolume(baseVol);
                   setMusicBtn(false);clearNowPlaying();
                 }
@@ -1197,7 +1171,9 @@ document.querySelectorAll('.dpad-btn').forEach(btn=>{
       dpadHoldTimer=setTimeout(()=>{ dpadHoldInterval=setInterval(()=>selectTrack(+5),200); },500);
     } else if(dir==='left'){seekYT(-10);}
     else if(dir==='right'){seekYT(+10);}
-    else if(dir==='center'){if(isBrowsing)confirmTrack();else toggleYt();}
+    else if(dir==='center'){
+      if(playlistBrowse&&currentPL){ playlistBrowse=false; playlistActive=false; currentPL=null; setPlActive(false); }
+    }
   };
   const release=()=>{ btn.classList.remove('pressed'); clearDpadHold(); };
   btn.addEventListener('mousedown',press);
