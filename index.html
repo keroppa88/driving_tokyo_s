@@ -65,6 +65,7 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
 }
 #dpad-center-dot { color:#555; }
 #dpad-center.pl-active #dpad-center-dot { color:#ff2020; text-shadow:0 0 8px #ff0000,0 0 16px #ff0000; }
+.pl-name-small { font-size:0.7em; }
 
 #loading-screen, #start-overlay, #sound-panel {
   position:absolute; inset:0; z-index:20; display:flex; flex-direction:column;
@@ -747,6 +748,16 @@ function trackLabel(e) {
   if(!e||!e.name) return e?e.id:'';
   const c=e.name.indexOf(','); return c===-1?e.name:`${e.name.slice(0,c).trim()} - ${e.name.slice(c+1).trim()}`;
 }
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function setDisp(el,text,{prefix='',suffix=''}={}){
+  const sep=text.indexOf(' ▷ ');
+  if(sep!==-1){
+    const plName=text.slice(0,sep), track=text.slice(sep+3);
+    el.innerHTML=`<span class="pl-name-small">${esc(plName)}</span><br>${esc(prefix+track+suffix)}`;
+  } else {
+    el.textContent=prefix+text+suffix;
+  }
+}
 
 function selectTrack(delta) {
   if(displayMode>0){ displayMode=0; applyDisplayMode(); }
@@ -756,7 +767,7 @@ function selectTrack(delta) {
     plTrackIdx = ((plTrackIdx + delta) % n + n) % n;
     isBrowsing = true;
     connectingEl.style.display = 'block';
-    connectingEl.textContent = `${currentPL.name} ▷ ${trackLabel(currentPL.tracks[plTrackIdx])}`;
+    setDisp(connectingEl,`${currentPL.name} ▷ ${trackLabel(currentPL.tracks[plTrackIdx])}`);
     clearTimeout(selectDebounce);
     return;
   }
@@ -775,13 +786,13 @@ function playTrack(track, label) {
   nowPlayingLabel = label;
   decisionSE.currentTime=0; decisionSE.play().catch(()=>{});
   connectingEl.style.display='block';
-  connectingEl.textContent=`${label}　接続中・・・`;
+  setDisp(connectingEl,label,{suffix:'　接続中・・・'});
   if(track.color) setSkyFromColor(track.color,!!track.solid);
   setSkyHorizBand(track.horiz);
   rainActive=!!track.rain; starActive=!!track.star;
   baseVol=parseInt(ytVolSlider.value); currentVolAdj=track.volAdj??1;
   applyVolAdj();
-  trackBarEl.textContent=`▶  ${label}`;
+  setDisp(trackBarEl,label,{prefix:'▶  '});
   if(nowPlayingEl) nowPlayingEl.textContent=`▶  ${label}`;
   if(track.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(track.id); }
   else { stopRadio(); if(ytReady&&ytPlayer){ seekOnPlay=track.startSec>0?track.startSec:null; ytPlayer.loadVideoById({videoId:track.id,startSeconds:track.startSec??0}); } }
@@ -849,8 +860,8 @@ async function initYTPlayer() {
               trackLoading=false;
               if(seekOnPlay!==null){ytPlayer.seekTo(seekOnPlay,true);seekOnPlay=null;}
               const lbl=nowPlayingLabel||trackLabel(playlist[playingIdx]);
-              connectingEl.style.display='block';connectingEl.textContent=lbl;
-              trackBarEl.textContent=`▶  ${lbl}`;isBrowsing=false;applyVolAdj();setMusicBtn(true);
+              connectingEl.style.display='block';setDisp(connectingEl,lbl);
+              setDisp(trackBarEl,lbl,{prefix:'▶  '});isBrowsing=false;applyVolAdj();setMusicBtn(true);
             }
             if(e.data===2){trackLoading=false;setMusicBtn(false);}
             if(e.data===0){
@@ -862,7 +873,7 @@ async function initYTPlayer() {
                   const next=currentPL.tracks[plTrackIdx];
                   const lbl=`${currentPL.name} ▷ ${trackLabel(next)}`;
                   nowPlayingLabel=lbl;
-                  trackBarEl.textContent=`▶  ${lbl}`;
+                  setDisp(trackBarEl,lbl,{prefix:'▶  '});
                   if(next.color) setSkyFromColor(next.color,!!next.solid);
                   setSkyHorizBand(next.horiz);
                   rainActive=!!next.rain; starActive=!!next.star;
