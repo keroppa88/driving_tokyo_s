@@ -685,28 +685,54 @@ let seekOnPlay = null;
 let playlist = [{ id:'3Fy8XYr6J6s', type:'yt', name:'Silence', color:null, rain:false, star:false, volAdj:1 }];
 let playlistIdx = 0, playingIdx = 0, isBrowsing = false, trackLoading = false, selectDebounce = null;
 let trackWasConfirmed = false;
+let playlistActive = false;   // a playlist is currently playing (auto-advance on)
+let playlistBrowse = false;   // user is browsing within a playlist
+let currentPL = null;         // active playlist entry { name, tracks[] }
+let plTrackIdx = 0;           // current track index within currentPL
+let nowPlayingLabel = '';      // label used in trackBar / connectBar
 
 const nowPlayingEl  = null;
 const connectingEl  = connectBar;
 
 const decisionSE = new Audio('music/決定ボタンを押す7.mp3');
 
+function parseSongLine(l) {
+  const urlM=l.match(/https?:\/\/[^「\s]+/); if(!urlM) return null;
+  const url=urlM[0], rest=l.slice(urlM.index+url.length).trim();
+  const nameM=rest.match(/「([^」]*)」/); const name=nameM?nameM[1]:'';
+  const kw=rest.replace(/「[^」]*」/,'');
+  const colorM=kw.match(/#[0-9a-fA-F]{6}/); const color=colorM?colorM[0]:null;
+  const horizM=kw.match(/地平線(#[0-9a-fA-F]{6})/); const horiz=horizM?horizM[1]:null;
+  const volM=kw.match(/音量([+-]?\d+)[%％]/); const volAdj=volM?1+parseInt(volM[1])/100:1;
+  const startM=kw.match(/開始(\d+)秒/); const startSec=startM?parseInt(startM[1]):0;
+  const isYT=/youtube\.com|youtu\.be/.test(url);
+  const vid=isYT?(url.match(/[?&]v=([^&]+)/)?.[1]||url):url.replace(/&amp;/g,'&');
+  return {id:vid,type:isYT?'yt':'radio',name,color,rain:/雨/.test(kw),star:/星/.test(kw),solid:/単色/.test(kw),horiz,volAdj,startSec};
+}
+
 async function loadPlaylist() {
   try {
     const text = await (await fetch('musiclist.txt')).text();
-    const entries = text.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('#')).map(l=>{
-      const urlM=l.match(/https?:\/\/[^「\s]+/); if(!urlM) return {type:'label',name:l,id:null};
-      const url=urlM[0], rest=l.slice(urlM.index+url.length).trim();
-      const nameM=rest.match(/「([^」]*)」/); const name=nameM?nameM[1]:'';
-      const kw=rest.replace(/「[^」]*」/,'');
-      const colorM=kw.match(/#[0-9a-fA-F]{6}/); const color=colorM?colorM[0]:null;
-      const horizM=kw.match(/地平線(#[0-9a-fA-F]{6})/); const horiz=horizM?horizM[1]:null;
-      const volM=kw.match(/音量([+-]?\d+)[%％]/); const volAdj=volM?1+parseInt(volM[1])/100:1;
-      const startM=kw.match(/開始(\d+)秒/); const startSec=startM?parseInt(startM[1]):0;
-      const isYT=/youtube\.com|youtu\.be/.test(url);
-      const vid=isYT?(url.match(/[?&]v=([^&]+)/)?.[1]||url):url.replace(/&amp;/g,'&');
-      return {id:vid,type:isYT?'yt':'radio',name,color,rain:/雨/.test(kw),star:/星/.test(kw),solid:/単色/.test(kw),horiz,volAdj,startSec};
-    }).filter(Boolean);
+    const lines = text.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('#'));
+    const entries = [];
+    for(const l of lines) {
+      const plM = l.match(/^(プレイリスト「[^」]+」\.txt)$/);
+      if(plM) {
+        const filename = plM[1];
+        const plName = filename.replace(/\.txt$/,'');
+        try {
+          const plText = await (await fetch(filename)).text();
+          const tracks = plText.split('\n').map(x=>x.trim()).filter(x=>x&&!x.startsWith('#'))
+            .map(parseSongLine).filter(Boolean);
+          if(tracks.length>0) entries.push({type:'playlist',name:plName,tracks,id:null,color:null,rain:false,star:false,volAdj:1});
+        } catch(_) { /* file not found, skip */ }
+        continue;
+      }
+      const urlM = l.match(/https?:\/\/[^「\s]+/);
+      if(!urlM){ entries.push({type:'label',name:l,id:null}); continue; }
+      const song = parseSongLine(l);
+      if(song) entries.push(song);
+    }
     if(entries.length>0){playlist=entries;}
   } catch(e){console.warn('[playlist] load failed');}
 }
@@ -718,34 +744,68 @@ function trackLabel(e) {
 
 function selectTrack(delta) {
   if(displayMode>0){ displayMode=0; applyDisplayMode(); }
+
+  if(playlistBrowse && currentPL) {
+    const newIdx = plTrackIdx + delta;
+    if(newIdx >= 0 && newIdx < currentPL.tracks.length) {
+      plTrackIdx = newIdx;
+      isBrowsing = true;
+      connectingEl.style.display = 'block';
+      connectingEl.textContent = `${currentPL.name} ▷ ${trackLabel(currentPL.tracks[plTrackIdx])}`;
+      clearTimeout(selectDebounce);
+      return;
+    }
+    playlistBrowse = false; // out of bounds → fall through to main list
+  }
+
   if(!playlist.length) return;
   playlistIdx=((playlistIdx+delta)%playlist.length+playlist.length)%playlist.length;
   const e=playlist[playlistIdx]; isBrowsing=(e.type!=='label');
   connectingEl.style.display='block';
-  connectingEl.textContent=e.type==='label'?`── ${e.name} ──`:trackLabel(e);
+  connectingEl.textContent=e.type==='label'?`── ${e.name} ──`:
+    e.type==='playlist'?e.name:trackLabel(e);
   clearTimeout(selectDebounce);
+}
+
+function playTrack(track, label) {
+  isBrowsing=false; trackLoading=true; trackWasConfirmed=true;
+  nowPlayingLabel = label;
+  decisionSE.currentTime=0; decisionSE.play().catch(()=>{});
+  connectingEl.style.display='block';
+  connectingEl.textContent=`${label}　接続中・・・`;
+  if(track.color) setSkyFromColor(track.color,!!track.solid);
+  setSkyHorizBand(track.horiz);
+  rainActive=!!track.rain; starActive=!!track.star;
+  baseVol=parseInt(ytVolSlider.value); currentVolAdj=track.volAdj??1;
+  applyVolAdj();
+  trackBarEl.textContent=`▶  ${label}`;
+  if(nowPlayingEl) nowPlayingEl.textContent=`▶  ${label}`;
+  if(track.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(track.id); }
+  else { stopRadio(); if(ytReady&&ytPlayer){ seekOnPlay=track.startSec>0?track.startSec:null; ytPlayer.loadVideoById({videoId:track.id,startSeconds:track.startSec??0}); } }
 }
 
 function confirmTrack() {
   if(!isBrowsing) return;
   if(musicPlaying&&!radioActive) return;
-  isBrowsing=false;
-  trackLoading=true;
+
+  if(playlistBrowse && currentPL) {
+    const track = currentPL.tracks[plTrackIdx];
+    playTrack(track, `${currentPL.name} ▷ ${trackLabel(track)}`);
+    return;
+  }
+
+  const e = playlist[playlistIdx];
+  if(e.type==='playlist') {
+    playlistActive=true; playlistBrowse=true;
+    currentPL=e; plTrackIdx=0;
+    const track=e.tracks[0];
+    playTrack(track, `${e.name} ▷ ${trackLabel(track)}`);
+    return;
+  }
+
+  playlistActive=false; playlistBrowse=false; currentPL=null;
   playingIdx=playlistIdx;
-  const e=playlist[playingIdx];
-  decisionSE.currentTime=0; decisionSE.play().catch(()=>{});
-  connectingEl.style.display='block';
-  connectingEl.textContent=`${trackLabel(e)}　接続中・・・`;
-  if(e.color) setSkyFromColor(e.color,!!e.solid);
-  setSkyHorizBand(e.horiz);
-  rainActive=!!e.rain; starActive=!!e.star;
-  baseVol=parseInt(ytVolSlider.value); currentVolAdj=e.volAdj??1;
-  applyVolAdj();
-  trackBarEl.textContent=`▶  ${trackLabel(e)}`;
-  if(nowPlayingEl) nowPlayingEl.textContent=`▶  ${trackLabel(e)}`;
-  trackWasConfirmed = true;
-  if(e.type==='radio'){ if(ytReady&&ytPlayer) ytPlayer.stopVideo(); playRadio(e.id); }
-  else { stopRadio(); if(ytReady&&ytPlayer){ seekOnPlay=e.startSec>0?e.startSec:null; ytPlayer.loadVideoById({videoId:e.id,startSeconds:e.startSec??0}); } }
+  playTrack(e, trackLabel(e));
 }
 
 function applyVolAdj() {
@@ -781,9 +841,40 @@ async function initYTPlayer() {
         events:{
           onReady:e=>{ytReady=true;res(e.target);},
           onStateChange:e=>{
-            if(e.data===1){trackLoading=false;if(seekOnPlay!==null){ytPlayer.seekTo(seekOnPlay,true);seekOnPlay=null;}const lbl=trackLabel(playlist[playingIdx]);connectingEl.style.display='block';connectingEl.textContent=lbl;trackBarEl.textContent=`▶  ${lbl}`;isBrowsing=false;applyVolAdj();setMusicBtn(true);}
+            if(e.data===1){
+              trackLoading=false;
+              if(seekOnPlay!==null){ytPlayer.seekTo(seekOnPlay,true);seekOnPlay=null;}
+              const lbl=nowPlayingLabel||trackLabel(playlist[playingIdx]);
+              connectingEl.style.display='block';connectingEl.textContent=lbl;
+              trackBarEl.textContent=`▶  ${lbl}`;isBrowsing=false;applyVolAdj();setMusicBtn(true);
+            }
             if(e.data===2){trackLoading=false;setMusicBtn(false);}
-            if(e.data===0){trackLoading=false;currentVolAdj=1;ytVolSlider.value=baseVol;document.getElementById('yt-vol2-lbl').textContent=baseVol+'%';ytPlayer.setVolume(baseVol);setMusicBtn(false);clearNowPlaying();}
+            if(e.data===0){
+              trackLoading=false;
+              if(playlistActive&&currentPL){
+                const nextIdx=plTrackIdx+1;
+                if(nextIdx<currentPL.tracks.length){
+                  plTrackIdx=nextIdx;
+                  const next=currentPL.tracks[plTrackIdx];
+                  const lbl=`${currentPL.name} ▷ ${trackLabel(next)}`;
+                  nowPlayingLabel=lbl;
+                  trackBarEl.textContent=`▶  ${lbl}`;
+                  if(next.color) setSkyFromColor(next.color,!!next.solid);
+                  setSkyHorizBand(next.horiz);
+                  rainActive=!!next.rain; starActive=!!next.star;
+                  currentVolAdj=next.volAdj??1; applyVolAdj();
+                  seekOnPlay=next.startSec>0?next.startSec:null;
+                  ytPlayer.loadVideoById({videoId:next.id,startSeconds:next.startSec??0});
+                } else {
+                  playlistActive=false; playlistBrowse=false; currentPL=null;
+                  currentVolAdj=1;ytVolSlider.value=baseVol;document.getElementById('yt-vol2-lbl').textContent=baseVol+'%';ytPlayer.setVolume(baseVol);
+                  setMusicBtn(false);clearNowPlaying();
+                }
+              } else {
+                currentVolAdj=1;ytVolSlider.value=baseVol;document.getElementById('yt-vol2-lbl').textContent=baseVol+'%';ytPlayer.setVolume(baseVol);
+                setMusicBtn(false);clearNowPlaying();
+              }
+            }
           },
           onError:e=>rej(e.data),
         }
