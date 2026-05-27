@@ -513,7 +513,7 @@ window.addEventListener('resize', onResize);
 // ─────────────────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = null;
-scene.fog = new THREE.FogExp2(0xc8daf0, 0.0075);
+scene.fog = new THREE.FogExp2(0xc8daf0, 0.012);
 
 // Sky gradient shader
 const skyUniforms = {
@@ -634,29 +634,6 @@ let starActive = false;
   window._updateStars=function(){ starSystem.visible=starActive; if(starActive)starSystem.position.copy(camera.position); };
 }
 
-// ─────────────────────────────────────────────
-//  MOUNTAIN RINGS
-// ─────────────────────────────────────────────
-function buildMountainRings() {
-  function makeTex(seed,color,rs=1){
-    const W=2048,H=512,cv=document.createElement('canvas'); cv.width=W;cv.height=H;
-    const ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H);
-    const prof=new Float32Array(W+1);
-    for(let x=0;x<=W;x++){const t=x/W*Math.PI*2;let h=0;h+=.30*Math.sin(t*3+seed);h+=.20*Math.sin(t*7+seed*1.3);h+=.10*Math.sin(t*13+seed*.7);h+=.05*Math.sin(t*23+seed*2.1);h+=.03*Math.sin(t*41+seed*1.7);prof[x]=h;}
-    const mn=Math.min(...prof),mx=Math.max(...prof);
-    ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(0,H);
-    for(let x=0;x<=W;x++){const n=(prof[x]-mn)/(mx-mn);ctx.lineTo(x,H*(.60+(1-n)*.38*rs));}
-    ctx.lineTo(W,H);ctx.closePath();ctx.fill();
-    return new THREE.CanvasTexture(cv);
-  }
-  const layers=[{r:150,h:90,cy:15,color:'#8a7860',seed:1.2,rs:37/90},{r:260,h:95,cy:17,color:'#7a7890',seed:2.7,rs:43/95},{r:400,h:100,cy:20,color:'#9898b0',seed:4.1,rs:53/100}];
-  return layers.map(L=>{
-    const m=new THREE.Mesh(new THREE.CylinderGeometry(L.r,L.r,L.h,64,1,true),
-      new THREE.MeshBasicMaterial({map:makeTex(L.seed,L.color,L.rs),side:THREE.BackSide,transparent:true,alphaTest:.05,depthWrite:false,fog:false}));
-    m.position.y=L.cy; m.frustumCulled=false; scene.add(m); return m;
-  });
-}
-const mountainRings = buildMountainRings();
 
 // ─────────────────────────────────────────────
 //  AUDIO / BGM
@@ -1449,12 +1426,7 @@ function animate(){
   if(playerZDeltaFrame<-LOOP_LENGTH/2)playerZDeltaFrame+=LOOP_LENGTH;
   updateAllTrafficCars(dt);
 
-  for(const ring of mountainRings){
-    ring.position.x=camera.position.x; ring.position.z=camera.position.z;
-    ring.visible=!skyIsBlack;
-  }
-
-  const sp=.025;
+const sp=.025;
   skyUniforms.topColor.value.lerp(skyTopTarget,sp);
   skyUniforms.horizonColor.value.lerp(skyHorizTarget,sp);
   skyUniforms.horizonBandColor.value.lerp(skyHorizBandTarget,sp);
