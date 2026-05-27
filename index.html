@@ -224,7 +224,7 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 }
 .toggle-btn svg { width:55%; height:55%; }
 .toggle-btn:active { box-shadow:inset 3px 3px 8px rgba(0,0,0,.95); transform:scale(.96); }
-.toggle-btn.active { color:#6aba6a; }
+.toggle-btn.active { color:#ffffff; }
 .toggle-label { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; text-align:center; white-space:nowrap; }
 .sky-switch {
   position:relative; display:flex; align-items:center; overflow:hidden;
@@ -757,8 +757,12 @@ function selectTrack(delta) {
   playlistIdx=((playlistIdx+delta)%playlist.length+playlist.length)%playlist.length;
   const e=playlist[playlistIdx]; isBrowsing=(e.type!=='label');
   connectingEl.style.display='block';
-  connectingEl.textContent=e.type==='label'?`── ${e.name} ──`:
-    e.type==='playlist'?e.name:trackLabel(e);
+  if(e.type==='label'){ connectingEl.textContent=`── ${e.name} ──`; }
+  else if(e.type==='playlist'){
+    const m=e.name.match(/^(プレイリスト)(「[^」]*」)$/);
+    if(m) connectingEl.innerHTML=`${esc(m[1])}<br>${esc(m[2])}`;
+    else connectingEl.textContent=e.name;
+  } else { connectingEl.textContent=trackLabel(e); }
   clearTimeout(selectDebounce);
 }
 
@@ -771,6 +775,7 @@ function playTrack(track, label) {
   if(track.color) setSkyFromColor(track.color,!!track.solid);
   setSkyHorizBand(track.horiz);
   rainActive=!!track.rain; starActive=!!track.star;
+  btnRain.classList.toggle('active',rainActive); btnStar.classList.toggle('active',starActive);
   baseVol=parseInt(ytVolSlider.value); currentVolAdj=track.volAdj??1;
   applyVolAdj();
   setDisp(trackBarEl,label,{prefix:'▶  '});
@@ -858,6 +863,7 @@ async function initYTPlayer() {
                   if(next.color) setSkyFromColor(next.color,!!next.solid);
                   setSkyHorizBand(next.horiz);
                   rainActive=!!next.rain; starActive=!!next.star;
+                  btnRain.classList.toggle('active',rainActive); btnStar.classList.toggle('active',starActive);
                   currentVolAdj=next.volAdj??1; applyVolAdj();
                   seekOnPlay=next.startSec>0?next.startSec:null;
                   ytPlayer.loadVideoById({videoId:next.id,startSeconds:next.startSec??0});
