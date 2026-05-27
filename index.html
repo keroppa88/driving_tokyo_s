@@ -800,7 +800,7 @@ function playTrack(track, label) {
 
 function confirmTrack() {
   if(!isBrowsing) return;
-  if(musicPlaying&&!radioActive) return;
+  if(musicPlaying&&!radioActive&&!(playlistBrowse&&currentPL)) return;
 
   if(playlistBrowse && currentPL) {
     const track = currentPL.tracks[plTrackIdx];
