@@ -676,6 +676,9 @@ const dpadCenterEl = document.getElementById('dpad-center');
 function setPlActive(on) {
   dpadCenterEl.classList.toggle('pl-active', on);
 }
+function exitPlaylist() {
+  if(playlistBrowse&&currentPL){ playlistBrowse=false; playlistActive=false; currentPL=null; setPlActive(false); }
+}
 const connectingEl  = connectBar;
 
 const decisionSE = new Audio('music/決定ボタンを押す7.mp3');
@@ -1159,9 +1162,7 @@ document.querySelectorAll('.dpad-btn').forEach(btn=>{
       dpadHoldTimer=setTimeout(()=>{ dpadHoldInterval=setInterval(()=>selectTrack(+5),200); },500);
     } else if(dir==='left'){seekYT(-10);}
     else if(dir==='right'){seekYT(+10);}
-    else if(dir==='center'){
-      if(playlistBrowse&&currentPL){ playlistBrowse=false; playlistActive=false; currentPL=null; setPlActive(false); }
-    }
+    else if(dir==='center'){ exitPlaylist(); }
   };
   const release=()=>{ btn.classList.remove('pressed'); clearDpadHold(); };
   btn.addEventListener('mousedown',press);
@@ -1253,12 +1254,69 @@ btnHud.addEventListener('click',()=>{
       case 'ArrowRight': e.preventDefault(); seekYT(+10);     break;
       case 'y': case 'Y': btnPlay.click();  break;
       case 'a': case 'A': btnHud.click();   break;
+      case 'Escape': exitPlaylist(); break;
     }
   });
   document.addEventListener('keyup',e=>{
     if(e.key==='ArrowUp')   kbRelease('up');
     if(e.key==='ArrowDown') kbRelease('dn');
   });
+})();
+
+// ─────────────────────────────────────────────
+//  GAMEPAD CONTROLS
+// ─────────────────────────────────────────────
+(function(){
+  const prev={}, hold={};
+
+  function isDown(gp,idx){ const b=gp.buttons[idx]; if(!b) return false; return typeof b==='object'?b.pressed:!!b; }
+  function btnVal(gp,idx){ const b=gp.buttons[idx]; if(!b) return 0; return typeof b==='object'?b.value:(b?1:0); }
+
+  window._pollGamepad=function(){
+    const pads=navigator.getGamepads?navigator.getGamepads():[];
+    let gp=null;
+    for(let i=0;i<pads.length;i++){ if(pads[i]){gp=pads[i];break;} }
+    if(!gp) return;
+
+    // Left stick X → steering (yaw)
+    const stickX=gp.axes[0]||0;
+    if(Math.abs(stickX)>0.12) yaw-=stickX*0.03;
+
+    // Rising-edge buttons
+    function onPress(idx,fn){
+      const cur=isDown(gp,idx);
+      if(cur&&!prev[idx]) fn();
+      prev[idx]=cur;
+    }
+    onPress(3, ()=>btnPlay.click());   // Y / △  → play/confirm
+    onPress(0, ()=>btnHud.click());    // A / ×  → display toggle
+    onPress(8, exitPlaylist);          // Select → exit playlist
+    onPress(14,()=>seekYT(-10));       // D-pad left
+    onPress(15,()=>seekYT(+10));       // D-pad right
+
+    // RT(7)/LT(6) → speed
+    const spd=(btnVal(gp,7)-btnVal(gp,6))*1.5;
+    if(Math.abs(spd)>0.02){
+      speedSlider.value=Math.min(100,Math.max(0,+speedSlider.value+spd));
+      speedSlider.dispatchEvent(new Event('input'));
+    }
+
+    // D-pad up(12)/down(13) with hold-to-scroll
+    function dpadHold(idx,delta){
+      const cur=isDown(gp,idx);
+      const was=!!prev[idx];
+      if(cur&&!was){
+        selectTrack(delta);
+        hold[idx]=setTimeout(()=>{ hold['i'+idx]=setInterval(()=>selectTrack(delta<0?-5:5),200); },500);
+      } else if(!cur&&was){
+        clearTimeout(hold[idx]); clearInterval(hold['i'+idx]);
+        hold[idx]=hold['i'+idx]=null;
+      }
+      prev[idx]=cur;
+    }
+    dpadHold(12,-1);
+    dpadHold(13,+1);
+  };
 })();
 
 btnAuto.addEventListener('click',()=>{
@@ -1435,6 +1493,7 @@ const sp=.025;
 
   window._updateRain();
   window._updateStars();
+  window._pollGamepad();
 
   if(gameActive){
     hudSpeedEl.textContent=Math.round(cruiseSpeed/MAX_CRUISE*180);
