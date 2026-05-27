@@ -63,7 +63,8 @@ html, body { width:100%; height:100dvh; min-height:100vh; overflow:hidden; backg
   white-space:normal; word-break:break-word;
   text-align:center; line-height:1.2;
 }
-#dpad-center.pl-active .dpad-arrow { color:#ff1111; text-shadow:0 0 8px rgba(255,0,0,1); }
+#dpad-center-dot { color:#555; }
+#dpad-center.pl-active #dpad-center-dot { color:#ff2020; text-shadow:0 0 8px #ff0000,0 0 16px #ff0000; }
 
 #loading-screen, #start-overlay, #sound-panel {
   position:absolute; inset:0; z-index:20; display:flex; flex-direction:column;
@@ -327,7 +328,7 @@ body.screen-only #screen-wrapper::before { display:none; }
           <div id="dpad-up" class="dpad-btn" data-dir="up"><span class="dpad-arrow">▲</span></div>
           <div id="dpad-corner-tr"></div>
           <div id="dpad-left" class="dpad-btn" data-dir="left"><span class="dpad-arrow">◀</span></div>
-          <div id="dpad-center" class="dpad-btn" data-dir="center"><span class="dpad-arrow" id="dpad-center-dot" style="color:#555">●</span></div>
+          <div id="dpad-center" class="dpad-btn" data-dir="center"><span class="dpad-arrow" id="dpad-center-dot">●</span></div>
           <div id="dpad-right" class="dpad-btn" data-dir="right"><span class="dpad-arrow">▶</span></div>
           <div id="dpad-corner-bl"></div>
           <div id="dpad-down" class="dpad-btn" data-dir="down"><span class="dpad-arrow">▼</span></div>
