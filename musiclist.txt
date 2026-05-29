@@ -23,9 +23,12 @@ https://radio.avazfarsi.com:8000/radio.mp3「Radio,Iran(USA)/Radio AvazFarsi」
 https://classic-radio.stream.laut.fm/classic-radio 「Radio,Deutsch/Classic Radio」
 https://media-ssl.musicradio.com/ClassicFM 「Radio,UK/Classic FM」
 プレイリスト
-プレイリスト「Chill out」
+プレイリスト「Chill out（マイナー）」
 プレイリスト「♪cyber techno」
 プレイリスト「坂本龍一」
+プレイリスト「KIRINJI」
+プレイリスト「小泉今日子」
+プレイリスト「角川三人娘」
 Music
 https://www.youtube.com/watch?v=purfXvu24Ps	　「Chet Baker,You Don't Know What Love Is (1953)」#a1d1b6　雨
 https://www.youtube.com/watch?v=eAUOqv1mp58   「Joe Derise,How Long Has This Been Going On (1955)」
