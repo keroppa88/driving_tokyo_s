@@ -873,10 +873,11 @@ function parseSongLine(l) {
   const url=urlM[0], rest=l.slice(urlM.index+url.length).trim();
   const nameM=rest.match(/「([^」]*)」/); const name=nameM?nameM[1]:'';
   const kw=rest.replace(/「[^」]*」/,'');
-  const horizM=kw.match(/地平線(#[0-9a-fA-F]{6})/); const horiz=horizM?horizM[1]:null;
-  const skyRawM=kw.match(/空(#[0-9a-fA-F]{6})/); const skyRaw=skyRawM?skyRawM[1]:null;
+  // 「空#」「地平線#」はスペース(半角/全角)を挟んでもよい
+  const horizM=kw.match(/地平線[ 　]*(#[0-9a-fA-F]{6})/); const horiz=horizM?horizM[1]:null;
+  const skyRawM=kw.match(/空[ 　]*(#[0-9a-fA-F]{6})/); const skyRaw=skyRawM?skyRawM[1]:null;
   // 「空#」「地平線#」を除いた残りから従来の単一色(#xxxxxx, ×0.42加工)を拾う
-  const kwPlain=kw.replace(/地平線#[0-9a-fA-F]{6}/g,'').replace(/空#[0-9a-fA-F]{6}/g,'');
+  const kwPlain=kw.replace(/地平線[ 　]*#[0-9a-fA-F]{6}/g,'').replace(/空[ 　]*#[0-9a-fA-F]{6}/g,'');
   const colorM=kwPlain.match(/#[0-9a-fA-F]{6}/); const color=colorM?colorM[0]:null;
   const volM=kw.match(/音量([+-]?\d+)[%％]/); const volAdj=volM?1+parseInt(volM[1])/100:1;
   const startM=kw.match(/開始(\d+)秒/); const startSec=startM?parseInt(startM[1]):0;
