@@ -1719,10 +1719,11 @@ const sp=.025;
   skyMesh.position.copy(camera.position);
 
   if(colorHudOn){
-    // 描画中の生の色をそのまま表示。musiclistにこの「空#… 地平線#…」を
-    // コピペすれば、3バーで作った見た目を完全再現できる。
-    colorHudEl.textContent='空#'+skyUniforms.topColor.value.getHexString().toUpperCase()
-      +'　地平線#'+skyUniforms.horizonColor.value.getHexString().toUpperCase();
+    // 遷移途中(lerp中)の色ではなく「最終目標色」を表示する。
+    // 描画中の値を読むと遷移ラグで僅かに暗い値になり、保存→再現でわずかに暗くなるため。
+    // この「空#… 地平線#…」をmusiclistに手入力すれば3バーで作った見た目を再現できる。
+    colorHudEl.textContent='空#'+skyTopTarget.getHexString().toUpperCase()
+      +'　地平線#'+skyHorizTarget.getHexString().toUpperCase();
   }
 
   window._updateRain();
