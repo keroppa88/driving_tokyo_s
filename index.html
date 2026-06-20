@@ -591,6 +591,15 @@ function setSkyFromColor(hex, solid = false) {
 function setSkyHorizBand(hex) {
   if (hex) skyHorizBandTarget.set(hex); else skyHorizBandTarget.copy(skyHorizTarget);
 }
+// musiclistの「空#xxxxxx」: 空のてっぺん色を加工せず直接(生)設定する。
+// 3バー(色調・彩度・明暗)で作った空色をそのまま再現するための経路。
+function setSkyTopRaw(hex) {
+  skyIsBlack = hex.toLowerCase() === '#000000';
+  skyTopTarget.set(hex);
+  const h = {}; skyTopTarget.getHSL(h);
+  skyH = h.h; skyS = h.s; skyL = h.l;
+  syncSkySliders();
+}
 // musiclistの「地平線#xxxxxx」: 地平線色を加工せず直接(生)上書きする。
 // これによりHEX表示で読んだ地平線入力値をそのまま書けば再現できる。
 function applyHorizDirective(hex) {
@@ -864,15 +873,18 @@ function parseSongLine(l) {
   const url=urlM[0], rest=l.slice(urlM.index+url.length).trim();
   const nameM=rest.match(/「([^」]*)」/); const name=nameM?nameM[1]:'';
   const kw=rest.replace(/「[^」]*」/,'');
-  const colorM=kw.match(/#[0-9a-fA-F]{6}/); const color=colorM?colorM[0]:null;
   const horizM=kw.match(/地平線(#[0-9a-fA-F]{6})/); const horiz=horizM?horizM[1]:null;
+  const skyRawM=kw.match(/空(#[0-9a-fA-F]{6})/); const skyRaw=skyRawM?skyRawM[1]:null;
+  // 「空#」「地平線#」を除いた残りから従来の単一色(#xxxxxx, ×0.42加工)を拾う
+  const kwPlain=kw.replace(/地平線#[0-9a-fA-F]{6}/g,'').replace(/空#[0-9a-fA-F]{6}/g,'');
+  const colorM=kwPlain.match(/#[0-9a-fA-F]{6}/); const color=colorM?colorM[0]:null;
   const volM=kw.match(/音量([+-]?\d+)[%％]/); const volAdj=volM?1+parseInt(volM[1])/100:1;
   const startM=kw.match(/開始(\d+)秒/); const startSec=startM?parseInt(startM[1]):0;
   const isYT=/youtube\.com|youtu\.be/.test(url);
   const vid=isYT?(url.match(/[?&]v=([^&]+)/)?.[1]||url):url.replace(/&amp;/g,'&');
   // 空デコ: 雲2→3, 雲1→2, 星→1, なし→0
   const deco=/雲2/.test(kw)?3:/雲1/.test(kw)?2:/星/.test(kw)?1:0;
-  return {id:vid,type:isYT?'yt':'radio',name,color,rain:/雨/.test(kw),star:/星/.test(kw),deco,solid:/単色/.test(kw),horiz,volAdj,startSec};
+  return {id:vid,type:isYT?'yt':'radio',name,color,skyRaw,rain:/雨/.test(kw),star:/星/.test(kw),deco,solid:/単色/.test(kw),horiz,volAdj,startSec};
 }
 
 async function loadPlaylist() {
@@ -950,6 +962,7 @@ function playTrack(track, label) {
   connectingEl.style.display='block';
   setDisp(connectingEl,label,{suffix:'　接続中・・・'});
   if(track.color) setSkyFromColor(track.color,!!track.solid);
+  if(track.skyRaw) setSkyTopRaw(track.skyRaw);
   applyHorizDirective(track.horiz);
   rainActive=!!track.rain; skyDecoMode=track.deco??(track.star?1:0); applySkyDeco();
   btnRain.classList.toggle('active',rainActive);
@@ -1038,6 +1051,7 @@ async function initYTPlayer() {
                   nowPlayingLabel=lbl;
                   setDisp(trackBarEl,lbl,{prefix:'▶  '});
                   if(next.color) setSkyFromColor(next.color,!!next.solid);
+                  if(next.skyRaw) setSkyTopRaw(next.skyRaw);
                   applyHorizDirective(next.horiz);
                   rainActive=!!next.rain; skyDecoMode=next.deco??(next.star?1:0); applySkyDeco();
                   btnRain.classList.toggle('active',rainActive);
@@ -1704,13 +1718,10 @@ const sp=.025;
   skyMesh.position.copy(camera.position);
 
   if(colorHudOn){
-    // musiclist再現用の「入力値」を逆算して表示。
-    // 空: エンジンが空色を×0.42で暗くするため ÷0.42 で逆算 → 「#xxxxxx」として記載
-    // 地平線: そのまま → 「地平線#xxxxxx」として記載
-    const skyIn=skyUniforms.topColor.value.clone().multiplyScalar(1/0.42);
-    skyIn.r=Math.min(1,skyIn.r); skyIn.g=Math.min(1,skyIn.g); skyIn.b=Math.min(1,skyIn.b);
-    colorHudEl.textContent='空 #'+skyIn.getHexString().toUpperCase()
-      +'　地平線 #'+skyUniforms.horizonColor.value.getHexString().toUpperCase();
+    // 描画中の生の色をそのまま表示。musiclistにこの「空#… 地平線#…」を
+    // コピペすれば、3バーで作った見た目を完全再現できる。
+    colorHudEl.textContent='空#'+skyUniforms.topColor.value.getHexString().toUpperCase()
+      +'　地平線#'+skyUniforms.horizonColor.value.getHexString().toUpperCase();
   }
 
   window._updateRain();
