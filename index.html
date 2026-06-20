@@ -1325,6 +1325,23 @@ window.addEventListener('mousemove',e=>{
   mouseLastX=e.clientX;mouseLastY=e.clientY;
 });
 
+// 隠しコマンド: ↑↑↓↓←→←→ 音量 で 空色/地平線色のHEX表示をトグル
+const KONAMI = ['up','up','down','down','left','right','left','right','sound'];
+let konamiIdx = 0;
+let colorHudOn = false;
+const colorHudEl = document.createElement('div');
+colorHudEl.id = 'color-hud';
+colorHudEl.style.cssText = 'position:absolute;top:30px;left:11px;z-index:11;pointer-events:none;font-size:clamp(9px,2.4vw,13px);color:rgba(185,215,185,.92);text-shadow:0 0 5px rgba(0,220,0,.35);line-height:1.4;display:none;letter-spacing:.03em;';
+wrapper.appendChild(colorHudEl);
+function konamiInput(tok){
+  konamiIdx = (tok===KONAMI[konamiIdx]) ? konamiIdx+1 : (tok===KONAMI[0] ? 1 : 0);
+  if(konamiIdx===KONAMI.length){
+    konamiIdx = 0;
+    colorHudOn = !colorHudOn;
+    colorHudEl.style.display = colorHudOn ? 'block' : 'none';
+  }
+}
+
 // D-pad
 let dpadHoldTimer=null, dpadHoldInterval=null;
 function clearDpadHold(){ clearTimeout(dpadHoldTimer); clearInterval(dpadHoldInterval); dpadHoldTimer=dpadHoldInterval=null; }
@@ -1332,6 +1349,7 @@ document.querySelectorAll('.dpad-btn').forEach(btn=>{
   const dir=btn.dataset.dir; if(!dir)return;
   const press=()=>{
     btn.classList.add('pressed');
+    konamiInput(dir);
     if(dir==='up'){
       selectTrack(-1);
       dpadHoldTimer=setTimeout(()=>{ dpadHoldInterval=setInterval(()=>selectTrack(-5),200); },500);
@@ -1504,6 +1522,7 @@ btnAuto.addEventListener('click',()=>{
 });
 
 btnSoundBtn.addEventListener('click',()=>{
+  konamiInput('sound');
   soundPanel.style.display=soundPanel.style.display==='flex'?'none':'flex';
 });
 
@@ -1670,6 +1689,11 @@ const sp=.025;
   skyUniforms.horizonBandColor.value.lerp(skyHorizBandTarget,sp);
   scene.fog.color.lerp(skyHorizTarget,sp);
   skyMesh.position.copy(camera.position);
+
+  if(colorHudOn){
+    colorHudEl.textContent='空 #'+skyUniforms.topColor.value.getHexString().toUpperCase()
+      +'　地平線 #'+skyUniforms.horizonColor.value.getHexString().toUpperCase();
+  }
 
   window._updateRain();
   window._updateStars();
