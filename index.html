@@ -857,7 +857,9 @@ function parseSongLine(l) {
   const startM=kw.match(/開始(\d+)秒/); const startSec=startM?parseInt(startM[1]):0;
   const isYT=/youtube\.com|youtu\.be/.test(url);
   const vid=isYT?(url.match(/[?&]v=([^&]+)/)?.[1]||url):url.replace(/&amp;/g,'&');
-  return {id:vid,type:isYT?'yt':'radio',name,color,rain:/雨/.test(kw),star:/星/.test(kw),solid:/単色/.test(kw),horiz,volAdj,startSec};
+  // 空デコ: 雲2→3, 雲1→2, 星→1, なし→0
+  const deco=/雲2/.test(kw)?3:/雲1/.test(kw)?2:/星/.test(kw)?1:0;
+  return {id:vid,type:isYT?'yt':'radio',name,color,rain:/雨/.test(kw),star:/星/.test(kw),deco,solid:/単色/.test(kw),horiz,volAdj,startSec};
 }
 
 async function loadPlaylist() {
@@ -936,7 +938,7 @@ function playTrack(track, label) {
   setDisp(connectingEl,label,{suffix:'　接続中・・・'});
   if(track.color) setSkyFromColor(track.color,!!track.solid);
   setSkyHorizBand(track.horiz);
-  rainActive=!!track.rain; skyDecoMode=track.star?1:0; applySkyDeco();
+  rainActive=!!track.rain; skyDecoMode=track.deco??(track.star?1:0); applySkyDeco();
   btnRain.classList.toggle('active',rainActive);
   baseVol=parseInt(ytVolSlider.value); currentVolAdj=track.volAdj??1;
   applyVolAdj();
@@ -1024,7 +1026,7 @@ async function initYTPlayer() {
                   setDisp(trackBarEl,lbl,{prefix:'▶  '});
                   if(next.color) setSkyFromColor(next.color,!!next.solid);
                   setSkyHorizBand(next.horiz);
-                  rainActive=!!next.rain; skyDecoMode=next.star?1:0; applySkyDeco();
+                  rainActive=!!next.rain; skyDecoMode=next.deco??(next.star?1:0); applySkyDeco();
                   btnRain.classList.toggle('active',rainActive);
                   currentVolAdj=next.volAdj??1; applyVolAdj();
                   seekOnPlay=next.startSec>0?next.startSec:null;
