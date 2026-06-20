@@ -350,6 +350,13 @@ body.screen-only #screen-wrapper::before { display:none; }
             <div class="slider-col">
               <div class="tick-row"></div>
               <div class="slider-inline">
+                <input type="range" id="sky-sat-slider" min="0" max="100" value="63">
+                <span class="color-side-label">彩度</span>
+              </div>
+            </div>
+            <div class="slider-col">
+              <div class="tick-row"></div>
+              <div class="slider-inline">
                 <input type="range" id="sky-bright-slider" min="0" max="100" value="89">
                 <span class="color-side-label">明暗</span>
               </div>
@@ -555,13 +562,16 @@ function applySkySliders() {
 
 function syncSkySliders() {
   const colorEl = document.getElementById('sky-color-slider');
+  const satEl = document.getElementById('sky-sat-slider');
   const brightEl = document.getElementById('sky-bright-slider');
-  if (!colorEl || !brightEl) return;
+  if (!colorEl || !satEl || !brightEl) return;
   if (skySliderMode === 0) {
     colorEl.value = Math.round(skyH * 100);
+    satEl.value = Math.round(skyS * 100);
     brightEl.value = Math.round(Math.max(0, Math.min(100, (skyL - 0.1) / 0.88 * 100)));
   } else {
     colorEl.value = Math.round(horizH * 100);
+    satEl.value = Math.round(horizS * 100);
     brightEl.value = Math.round(Math.max(0, Math.min(100, (horizL - 0.1) / 0.88 * 100)));
   }
 }
@@ -1251,6 +1261,7 @@ ytVolSlider.addEventListener('input',e=>{
 });
 
 const skyColorSlider = document.getElementById('sky-color-slider');
+const skySatSlider = document.getElementById('sky-sat-slider');
 const skyBrightSlider = document.getElementById('sky-bright-slider');
 skyColorSlider.addEventListener('input', e => {
   const v = e.target.value / 100;
@@ -1263,6 +1274,12 @@ skyColorSlider.addEventListener('input', e => {
     if (horizS === 0) horizS = 0.6;
     if (horizL === 0) horizL = 0.1;
   }
+  applySkySliders();
+});
+skySatSlider.addEventListener('input', e => {
+  const v = e.target.value / 100;
+  if (skySliderMode === 0) { skyS = v; }
+  else { horizS = v; }
   applySkySliders();
 });
 skyBrightSlider.addEventListener('input', e => {
