@@ -591,6 +591,19 @@ function setSkyFromColor(hex, solid = false) {
 function setSkyHorizBand(hex) {
   if (hex) skyHorizBandTarget.set(hex); else skyHorizBandTarget.copy(skyHorizTarget);
 }
+// musiclistの「地平線#xxxxxx」: 地平線色を加工せず直接(生)上書きする。
+// これによりHEX表示で読んだ地平線入力値をそのまま書けば再現できる。
+function applyHorizDirective(hex) {
+  if (hex) {
+    skyHorizTarget.set(hex);
+    skyHorizBandTarget.copy(skyHorizTarget);
+    const h = {}; skyHorizTarget.getHSL(h);
+    horizH = h.h; horizS = h.s; horizL = h.l;
+    syncSkySliders();
+  } else {
+    setSkyHorizBand(null);
+  }
+}
 setSkyFromColor('#9bbae8');
 
 // ─────────────────────────────────────────────
@@ -937,7 +950,7 @@ function playTrack(track, label) {
   connectingEl.style.display='block';
   setDisp(connectingEl,label,{suffix:'　接続中・・・'});
   if(track.color) setSkyFromColor(track.color,!!track.solid);
-  setSkyHorizBand(track.horiz);
+  applyHorizDirective(track.horiz);
   rainActive=!!track.rain; skyDecoMode=track.deco??(track.star?1:0); applySkyDeco();
   btnRain.classList.toggle('active',rainActive);
   baseVol=parseInt(ytVolSlider.value); currentVolAdj=track.volAdj??1;
@@ -1025,7 +1038,7 @@ async function initYTPlayer() {
                   nowPlayingLabel=lbl;
                   setDisp(trackBarEl,lbl,{prefix:'▶  '});
                   if(next.color) setSkyFromColor(next.color,!!next.solid);
-                  setSkyHorizBand(next.horiz);
+                  applyHorizDirective(next.horiz);
                   rainActive=!!next.rain; skyDecoMode=next.deco??(next.star?1:0); applySkyDeco();
                   btnRain.classList.toggle('active',rainActive);
                   currentVolAdj=next.volAdj??1; applyVolAdj();
@@ -1691,7 +1704,12 @@ const sp=.025;
   skyMesh.position.copy(camera.position);
 
   if(colorHudOn){
-    colorHudEl.textContent='空 #'+skyUniforms.topColor.value.getHexString().toUpperCase()
+    // musiclist再現用の「入力値」を逆算して表示。
+    // 空: エンジンが空色を×0.42で暗くするため ÷0.42 で逆算 → 「#xxxxxx」として記載
+    // 地平線: そのまま → 「地平線#xxxxxx」として記載
+    const skyIn=skyUniforms.topColor.value.clone().multiplyScalar(1/0.42);
+    skyIn.r=Math.min(1,skyIn.r); skyIn.g=Math.min(1,skyIn.g); skyIn.b=Math.min(1,skyIn.b);
+    colorHudEl.textContent='空 #'+skyIn.getHexString().toUpperCase()
       +'　地平線 #'+skyUniforms.horizonColor.value.getHexString().toUpperCase();
   }
 
