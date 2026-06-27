@@ -1271,9 +1271,9 @@ const nightMats = [];
 function collectNightMat(mat){
   if(!(mat && mat.color)) return;
   const base=mat.color.clone();
-  // 窓明かり等「白に近い明るい色」は夜も暗くせず発光的に残す(闇の中でも明るい)。
-  // R,G,Bすべてが高い=白っぽい色のみ対象(赤や青など彩度の高い色は通常どおり暗転)。
-  const glow=Math.min(base.r,base.g,base.b)>0.6;
+  // 窓明かり等「白〜黄に近い明るい色」は夜も暗くせず発光的に残す(闇の中でも明るい)。
+  // R・Gがともに高い色=白(B高)も黄(B低)も対象。赤/緑/青単色など他の色は通常どおり暗転。
+  const glow=base.r>0.6 && base.g>0.6;
   nightMats.push({mat, base, glow});
 }
 function loadSpecialModel(file,px,py,pz){
