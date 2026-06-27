@@ -1273,8 +1273,10 @@ function collectNightMat(mat){
   const base=mat.color.clone();
   // 窓明かり等は夜も暗くせず発光的に残す(闇の中でも明るい)。対象は
   // 「白に近い色」または「黄色に近い色」。赤/緑/青単色など他の色は通常どおり暗転。
-  const nearWhite  = base.r>0.6 && base.g>0.6 && base.b>0.6; // 全channel高い=白っぽい
-  const nearYellow = base.r>0.6 && base.g>0.6 && base.b<0.6; // R,G高くB低い=黄っぽい
+  const nearWhite  = Math.min(base.r,base.g,base.b) > 0.6;                  // 全channel高い=白っぽい
+  // 黄/マスタードは明るさに依存せず「青が赤・緑より明確に低い」で判定(くすんだ黄も拾う)。
+  // グレー壁(R≈G≈B)は青が落ちないので除外される。
+  const nearYellow = base.g>0.4 && base.b < base.r-0.2 && base.b < base.g-0.15;
   const glow = nearWhite || nearYellow;
   nightMats.push({mat, base, glow});
 }
