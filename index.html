@@ -539,8 +539,8 @@ const skyMat = new THREE.ShaderMaterial({
   uniforms: skyUniforms,
   vertexShader:   `varying vec3 vPos; void main(){ vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
   fragmentShader: `uniform vec3 topColor,horizonColor,horizonBandColor; varying vec3 vPos;
-    void main(){ float h=clamp(normalize(vPos).y,0.0,1.0); float b=smoothstep(0.0,0.11,h);
-      vec3 lo=mix(horizonBandColor,horizonColor,b); gl_FragColor=vec4(mix(lo,topColor,pow(h,0.6)),1.0); }`,
+    void main(){ float h=clamp(normalize(vPos).y,0.0,1.0); float b=smoothstep(0.0,0.18,h);
+      vec3 lo=mix(horizonBandColor,horizonColor,b); gl_FragColor=vec4(mix(lo,topColor,pow(h,0.85)),1.0); }`,
   side: THREE.BackSide, depthWrite: false, depthTest: false,
 });
 const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(490,32,15), skyMat);
@@ -745,8 +745,8 @@ const CLOUD_CFG = {
     warp:1.6,      // 形のうねり(大きいほど複雑)
     detail:0.8,    // 細部の量(0〜1, 大きいほどチラつきやすい)
     proj:0.06,     // 投影クランプ(小さいほど地平線方向に伸びる)
-    minY:0.04,     // 雲が出る最低の高さ(≈山の高さ。ここからぼかし始め)
-    band:0.06,     // 出始めのフェード幅(山の高さ→1.5倍あたりで徐々に出現)
+    minY:0.18,     // 雲が出る最低の高さ(USA兄弟版に合わせて高く)
+    band:0.10,     // 出始めのフェード幅(USA兄弟版に合わせて)
     flowBase:0.05,  // 停車時の流れ速度
     flowSpeed:0.06, // 走行速度への連動係数
     drift:0.0,     // 左右ドリフト
