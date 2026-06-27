@@ -225,6 +225,9 @@ input[type=range]::-moz-range-thumb { width:9px; height:26px; background:repeati
 .toggle-btn svg { width:55%; height:55%; }
 .toggle-btn:active { box-shadow:inset 3px 3px 8px rgba(0,0,0,.95); transform:scale(.96); }
 .toggle-btn.active { color:#ffffff; }
+#btn-light { width:70%; color:#6aba6a; }            /* ライト: OFFは緑・一回り小さい */
+#btn-light.active { color:#fff; }                    /* ON(発動)は白 */
+#btn-light svg { width:62%; height:62%; }
 .toggle-label { font-size:clamp(7px,1.9vw,10px); color:#000; font-weight:bold; text-align:center; white-space:nowrap; }
 .sky-switch {
   position:relative; display:flex; align-items:center; overflow:hidden;
@@ -363,6 +366,9 @@ body.screen-only #screen-wrapper::before { display:none; }
             </div>
           </div>
           <div id="sky-btns-col">
+            <button class="toggle-btn" id="btn-light">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 21h6v-1.5H9V21zm3-19C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .6.4 1 1 1h6c.6 0 1-.4 1-1v-2.3c1.8-1.2 3-3.3 3-5.7 0-3.9-3.1-7-7-7z"/></svg>
+            </button>
             <button class="toggle-btn" id="btn-star">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
@@ -625,10 +631,68 @@ camera.position.set(3.5, EYE_HEIGHT, -5);
 // ─────────────────────────────────────────────
 //  LIGHTING
 // ─────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+const ambient = new THREE.AmbientLight(0xffffff, 1.5);
+scene.add(ambient);
+const AMBIENT_BASE = 1.5, SUN_BASE = 1.0;
 const sun = new THREE.DirectionalLight(0xffffff, 1.0);
 sun.position.set(50, 100, 50);
 scene.add(sun);
+
+// Headlights: two forward-facing spot lights that switch on when it gets dark.
+function makeHeadlight(){
+  const s = new THREE.SpotLight(0xffd58a, 0, 0, 0.5, 0.7, 0); // 暖色, soft edge, decay 0
+  s.visible = false;
+  scene.add(s); scene.add(s.target);
+  return s;
+}
+const headL = makeHeadlight(), headR = makeHeadlight();
+const _hFwd = new THREE.Vector3(), _hRt = new THREE.Vector3(), _hEul = new THREE.Euler(0,0,0,'YXZ');
+
+// 地面/道路GLBがライト非依存(unlit)でスポットライトが効かない場合に備え、前方の
+// 地面に「光だまり」を加算ブレンドで重ね、暗い地表でも照射部を明るく(暖色)見せる。
+function makeHeadPoolTex(){
+  const S=128, cv=document.createElement('canvas'); cv.width=cv.height=S;
+  const ctx=cv.getContext('2d');
+  const g=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+  g.addColorStop(0,'rgba(255,213,138,1)');
+  g.addColorStop(0.5,'rgba(255,200,120,0.45)');
+  g.addColorStop(1,'rgba(255,190,110,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
+  return new THREE.CanvasTexture(cv);
+}
+const _headPoolTex = makeHeadPoolTex();
+function makeHeadPool(){
+  const geo=new THREE.PlaneGeometry(1,1); geo.rotateX(-Math.PI/2);   // lay flat in XZ
+  const m=new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    map:_headPoolTex, transparent:true, blending:THREE.AdditiveBlending,
+    depthWrite:false, depthTest:true, fog:false, opacity:0,
+    polygonOffset:true, polygonOffsetFactor:-4, polygonOffsetUnits:-4 })); // 地面とのZ-fight防止
+  m.frustumCulled=false; m.visible=false; m.renderOrder=6; scene.add(m); return m;
+}
+const poolL = makeHeadPool(), poolR = makeHeadPool();
+
+// ライト自動点灯(明暗=最低値で点灯)の瞬間に一度だけ色調・彩度を補正する。
+// 値によってはライトが見えないため。補正後にユーザーがいじるのは放任(=一発のみ)。
+let _autoLightPrev = 0;
+const LIGHT_FIX_SAT = 0.30;      // 補正後の彩度
+const LIGHT_FIX_HUE = 0.09;      // 補正後の色調(暖色寄り)
+const LIGHT_FIX_SAT_MIX = 0.7;   // 彩度を寄せる割合
+const LIGHT_FIX_HUE_MIX = 0.5;   // 色調を寄せる割合
+function _nudgeHue(h, target, mix){
+  let dh = target - h; if(dh>0.5) dh-=1; if(dh<-0.5) dh+=1;
+  h += dh*mix; if(h<0) h+=1; if(h>=1) h-=1; return h;
+}
+function applyAutoLightColorFix(){
+  // 明暗(L)は保持し、彩度・色調のみライト向けに寄せる。
+  skyS  += (LIGHT_FIX_SAT - skyS)  * LIGHT_FIX_SAT_MIX;
+  horizS+= (LIGHT_FIX_SAT - horizS)* LIGHT_FIX_SAT_MIX;
+  skyH   = _nudgeHue(skyH,   LIGHT_FIX_HUE, LIGHT_FIX_HUE_MIX);
+  horizH = _nudgeHue(horizH, LIGHT_FIX_HUE, LIGHT_FIX_HUE_MIX);
+  skyTopTarget.setHSL(skyH, skyS, skyL);
+  skyHorizTarget = new THREE.Color().setHSL(horizH, horizS, horizL);
+  skyHorizBandTarget.copy(skyHorizTarget);
+  syncSkySliders();
+}
 
 // ─────────────────────────────────────────────
 //  RAIN
@@ -1201,12 +1265,16 @@ function updateAllTrafficCars(dt){
 // ─────────────────────────────────────────────
 //  GLTF LOADER (main environment)
 // ─────────────────────────────────────────────
+// 地表マップGLBはライト非依存のことがあるため、マテリアル色を毎フレーム
+// ×kg で直接暗くする。読み込み時に {mat, 元色} を集めておく。
+const nightMats = [];
+function collectNightMat(mat){ if(mat && mat.color) nightMats.push({mat, base:mat.color.clone()}); }
 function loadSpecialModel(file,px,py,pz){
   return new Promise(resolve=>{
     new GLTFLoader().load(file+'?v='+Date.now(),gltf=>{
       const m=gltf.scene;
       m.traverse(c=>{if(!c.isMesh)return;c.frustumCulled=false;
-        const fix=mat=>{if(!mat)return;if(mat.color&&mat.color.r>.6&&mat.color.g<.35&&mat.color.b>.5){c.visible=false;return;}mat.transparent=false;mat.opacity=1;mat.depthWrite=true;mat.needsUpdate=true;};
+        const fix=mat=>{if(!mat)return;if(mat.color&&mat.color.r>.6&&mat.color.g<.35&&mat.color.b>.5){c.visible=false;return;}mat.transparent=false;mat.opacity=1;mat.depthWrite=true;mat.needsUpdate=true;collectNightMat(mat);};
         Array.isArray(c.material)?c.material.forEach(fix):fix(c.material);});
       m.scale.set(.4,.4,.4);m.position.set(px,py,pz);m.visible=false;scene.add(m);
       const mc=m.clone();mc.position.set(px,py,pz-LOOP_LENGTH);mc.visible=false;scene.add(mc);
@@ -1218,7 +1286,7 @@ function loadSpecialModel(file,px,py,pz){
 new GLTFLoader().load('ty01.glb?v='+Date.now(), gltf=>{
   const model=gltf.scene;
   model.traverse(c=>{if(!c.isMesh)return;c.frustumCulled=false;
-    const fix=m=>{if(!m)return;if(m.color&&m.color.r>.6&&m.color.g<.35&&m.color.b>.5){c.visible=false;return;}m.transparent=false;m.opacity=1;m.depthWrite=true;m.needsUpdate=true;};
+    const fix=m=>{if(!m)return;if(m.color&&m.color.r>.6&&m.color.g<.35&&m.color.b>.5){c.visible=false;return;}m.transparent=false;m.opacity=1;m.depthWrite=true;m.needsUpdate=true;collectNightMat(m);};
     Array.isArray(c.material)?c.material.forEach(fix):fix(c.material);});
   model.scale.set(.4,.4,.4); model.updateMatrixWorld(true);
   const box=new THREE.Box3().setFromObject(model), cen=box.getCenter(new THREE.Vector3());
@@ -1555,6 +1623,13 @@ btnSoundBtn.addEventListener('click',()=>{
 
 const btnRain = document.getElementById('btn-rain');
 const btnStar = document.getElementById('btn-star');
+// ライト手動ON/OFF: ONで点灯(明暗スライダーが暗いほど明るく照射・明るい空では見えにくい)。
+let lightManualOn = false;
+const btnLight = document.getElementById('btn-light');
+btnLight.addEventListener('click', () => {
+  lightManualOn = !lightManualOn;
+  btnLight.classList.toggle('active', lightManualOn);
+});
 btnRain.addEventListener('click', () => {
   rainActive = !rainActive;
   btnRain.classList.toggle('active', rainActive);
@@ -1717,11 +1792,61 @@ const sp=.025;
   scene.fog.color.lerp(skyHorizTarget,sp);
   skyMesh.position.copy(camera.position);
 
+  // 空(上空/地平線)の明るさが下がるほど環境光・地表ライトを落とし、暗くなると点灯。
+  const _lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+  const b=Math.max(_lum(skyUniforms.topColor.value),_lum(skyUniforms.horizonColor.value));
+  const k=Math.max(0.02,Math.min(1,b/0.40));
+  ambient.intensity=AMBIENT_BASE*k;
+  sun.intensity=SUN_BASE*k;
+  // 空が暗いほど地表GLB(ライト非依存)の色を直接×kgで暗くする(夜は道路/地面が暗転)。
+  const _kg0=Math.max(0,Math.min(1,b/0.40)), kg=_kg0*_kg0;
+  for(let i=0;i<nightMats.length;i++){ nightMats[i].mat.color.copy(nightMats[i].base).multiplyScalar(kg); }
+  // ヘッドライト: 手動ONなら明暗フェードで点灯。明暗0で全開、下から30%でゼロ、
+  // それ以上は照明オフ(白飛び防止)。
+  const _bvN = Math.max(0,Math.min(1,(Math.max(skyL,horizL)-0.1)/0.88));
+  const lightFade = _bvN >= 0.30 ? 0 : (1 - _bvN/0.30);
+  // 明暗が最低値になった瞬間に自動点灯＋色調/彩度を一度だけ補正。
+  // 以後はユーザーがボタンでON/OFF自由(再点灯も可)。それ以外の明暗でも手動ON/OFF可。
+  const _atMin = _bvN <= 0.001;
+  if(_atMin && _autoLightPrev===0){
+    lightManualOn = true; btnLight.classList.add('active');
+    applyAutoLightColorFix();
+  }
+  _autoLightPrev = _atMin ? 1 : 0;
+  // 点灯はユーザー意思(lightManualOn)で決定。強度は明暗フェード(30%超は0=白飛び防止)。
+  const headOn = lightManualOn ? lightFade : 0;
+  if(headOn>0){
+    const eff=getEffectiveYaw();
+    _hFwd.set(0,0,-1).applyEuler(_hEul.set(0,eff,0));
+    _hRt.set(1,0,0).applyEuler(_hEul.set(0,eff,0));
+    const spacing=EYE_HEIGHT*0.45, throwD=EYE_HEIGHT*7.5, spread=EYE_HEIGHT*2.3;
+    const lit=13.6*headOn;
+    for(const [lt,sgn] of [[headL,-1],[headR,1]]){
+      lt.visible=true; lt.intensity=lit;
+      lt.position.copy(camera.position).addScaledVector(_hRt,sgn*spacing).addScaledVector(_hFwd,EYE_HEIGHT*0.3);
+      lt.position.y=EYE_HEIGHT*0.75;
+      lt.target.position.copy(camera.position).addScaledVector(_hFwd,throwD).addScaledVector(_hRt,sgn*spread);
+      lt.target.position.y=0; lt.target.updateMatrixWorld();
+    }
+    // 地表の光だまり(加算): 暗いunlit地面でも照射部を明るく見せる。
+    for(const [pool,sgn] of [[poolL,-1],[poolR,1]]){
+      pool.visible=true; pool.material.opacity=Math.min(1,headOn*0.864);
+      pool.position.copy(camera.position).addScaledVector(_hFwd,throwD*0.55).addScaledVector(_hRt,sgn*spread*0.5);
+      pool.position.y=0.06;
+      pool.rotation.y=eff;
+      pool.scale.set(spread*1.8,2, throwD*5.5);   // 横幅・高さ・奥行
+    }
+  } else {
+    headL.visible=headR.visible=false;
+    poolL.visible=poolR.visible=false;
+  }
+
   if(colorHudOn){
-    // 描画中の生の色をそのまま表示。musiclistにこの「空#… 地平線#…」を
-    // コピペすれば、3バーで作った見た目を完全再現できる。
-    colorHudEl.textContent='空#'+skyUniforms.topColor.value.getHexString().toUpperCase()
-      +'　地平線#'+skyUniforms.horizonColor.value.getHexString().toUpperCase();
+    // 遷移途中ではなく設定された最終目標色(生色)を表示。途中のlerp値は僅かに
+    // 暗くズレるため。musiclistにこの「空#… 地平線#…」をコピペすれば
+    // 3バーで作った見た目を完全再現できる。
+    colorHudEl.textContent='空#'+skyTopTarget.getHexString().toUpperCase()
+      +'　地平線#'+skyHorizTarget.getHexString().toUpperCase();
   }
 
   window._updateRain();
