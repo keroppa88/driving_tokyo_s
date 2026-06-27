@@ -640,7 +640,7 @@ scene.add(sun);
 
 // Headlights: two forward-facing spot lights that switch on when it gets dark.
 function makeHeadlight(){
-  const s = new THREE.SpotLight(0xffd58a, 0, 0, 0.5, 0.7, 0); // 暖色, soft edge, decay 0
+  const s = new THREE.SpotLight(0xffd58a, 0, 0, 0.8, 0.7, 0); // 暖色, 広角(壁も照らす), soft edge, decay 0
   s.visible = false;
   scene.add(s); scene.add(s.target);
   return s;
@@ -1827,17 +1827,17 @@ const sp=.025;
     _hFwd.set(0,0,-1).applyEuler(_hEul.set(0,eff,0));
     _hRt.set(1,0,0).applyEuler(_hEul.set(0,eff,0));
     const spacing=EYE_HEIGHT*0.45, throwD=EYE_HEIGHT*7.5, spread=EYE_HEIGHT*2.3;
-    const lit=18*headOn;   // スポットライト強度UP(壁への照射を強化)
+    const lit=22*headOn;   // スポットライト強度UP(壁への照射を強化)
     for(const [lt,sgn] of [[headL,-1],[headR,1]]){
       lt.visible=true; lt.intensity=lit;
       lt.position.copy(camera.position).addScaledVector(_hRt,sgn*spacing).addScaledVector(_hFwd,EYE_HEIGHT*0.3);
       lt.position.y=EYE_HEIGHT*0.75;
       lt.target.position.copy(camera.position).addScaledVector(_hFwd,throwD).addScaledVector(_hRt,sgn*spread);
-      lt.target.position.y=0; lt.target.updateMatrixWorld();
+      lt.target.position.y=EYE_HEIGHT*0.8; lt.target.updateMatrixWorld();  // 狙いを壁の高さへ(地面偏重を解消)
     }
     // 地表の光だまり(加算): 暗いunlit地面でも照射部を明るく見せる。
     for(const [pool,sgn] of [[poolL,-1],[poolR,1]]){
-      pool.visible=true; pool.material.opacity=Math.min(1,headOn*0.38);  // 地表光だまりDOWN(白飛び対策)
+      pool.visible=true; pool.material.opacity=Math.min(1,headOn*0.18);  // 地表光だまり大幅DOWN(壁とのギャップ解消)
       pool.position.copy(camera.position).addScaledVector(_hFwd,throwD*0.55).addScaledVector(_hRt,sgn*spread*0.5);
       pool.position.y=0.06;
       pool.rotation.y=eff;
