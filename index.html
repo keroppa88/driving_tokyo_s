@@ -1834,7 +1834,10 @@ const sp=.025;
   // 下限を底上げし、unlitな壁もヘッドライト下で見えるように(地表とのギャップ縮小)。
   // 地表/壁は同じkgで暗くなるので、差は加算の「光だまり」だけ→そちらを絞る。
   const _kg0=Math.max(0,Math.min(1,b/0.40)), kg=Math.max(headOn*0.28, _kg0*_kg0);
-  for(let i=0;i<nightMats.length;i++){ const nm=nightMats[i]; nm.mat.color.copy(nm.base).multiplyScalar(nm.glow?1.0:kg); }  // 白っぽい色(窓明かり)は素の明るさ維持
+  // 窓明かり(白/黄)は夜ほど増幅して強く光らせる(昼は等倍で白飛び回避)。
+  // 係数1.6を上げるとより明るく。チャンネルは1.0でクランプされ白方向へ寄る。
+  const glowBoost = 1 + 1.6*(1-kg);
+  for(let i=0;i<nightMats.length;i++){ const nm=nightMats[i]; nm.mat.color.copy(nm.base).multiplyScalar(nm.glow?glowBoost:kg); }
   if(headOn>0){
     const eff=getEffectiveYaw();
     _hFwd.set(0,0,-1).applyEuler(_hEul.set(0,eff,0));
