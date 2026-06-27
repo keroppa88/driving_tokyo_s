@@ -1268,7 +1268,18 @@ function updateAllTrafficCars(dt){
 // 地表マップGLBはライト非依存のことがあるため、マテリアル色を毎フレーム
 // ×kg で直接暗くする。読み込み時に {mat, 元色} を集めておく。
 const nightMats = [];
-function collectNightMat(mat){ if(mat && mat.color) nightMats.push({mat, base:mat.color.clone()}); }
+function collectNightMat(mat){
+  if(!(mat && mat.color)) return;
+  const base=mat.color.clone();
+  // 窓明かり等は夜も暗くせず発光的に残す(闇の中でも明るい)。対象は
+  // 「白に近い色」または「黄色に近い色」。赤/緑/青単色など他の色は通常どおり暗転。
+  const nearWhite  = Math.min(base.r,base.g,base.b) > 0.6;                  // 全channel高い=白っぽい
+  // 黄/マスタードは明るさに依存せず「青が赤・緑より明確に低い」で判定(くすんだ黄も拾う)。
+  // グレー壁(R≈G≈B)は青が落ちないので除外される。
+  const nearYellow = base.g>0.4 && base.b < base.r-0.2 && base.b < base.g-0.15;
+  const glow = nearWhite || nearYellow;
+  nightMats.push({mat, base, glow});
+}
 function loadSpecialModel(file,px,py,pz){
   return new Promise(resolve=>{
     new GLTFLoader().load(file+'?v='+Date.now(),gltf=>{
@@ -1823,7 +1834,7 @@ const sp=.025;
   // 下限を底上げし、unlitな壁もヘッドライト下で見えるように(地表とのギャップ縮小)。
   // 地表/壁は同じkgで暗くなるので、差は加算の「光だまり」だけ→そちらを絞る。
   const _kg0=Math.max(0,Math.min(1,b/0.40)), kg=Math.max(headOn*0.28, _kg0*_kg0);
-  for(let i=0;i<nightMats.length;i++){ nightMats[i].mat.color.copy(nightMats[i].base).multiplyScalar(kg); }
+  for(let i=0;i<nightMats.length;i++){ const nm=nightMats[i]; nm.mat.color.copy(nm.base).multiplyScalar(nm.glow?1.0:kg); }  // 白っぽい色(窓明かり)は素の明るさ維持
   if(headOn>0){
     const eff=getEffectiveYaw();
     _hFwd.set(0,0,-1).applyEuler(_hEul.set(0,eff,0));
